@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Clientes — OrderFlow Admin</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #0b0f19;
+            --bg-sidebar: #111827;
+            --bg-card: #1f2937;
+            --bg-card-hover: #374151;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --border-color: #374151;
+            --sidebar-width: 250px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: fixed;
+            top: 0; bottom: 0; left: 0;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 1.5rem 1.25rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .sidebar-brand span { color: var(--text-main); }
+
+        .sidebar-menu { padding: 1.25rem 0.75rem; display: flex; flex-direction: column; gap: 0.375rem; flex: 1; }
+        .sidebar-link {
+            display: flex; align-items: center; gap: 0.875rem; padding: 0.75rem 1rem;
+            color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.9375rem;
+            border-radius: 10px; transition: all 0.2s ease;
+        }
+        .sidebar-link:hover { background-color: var(--bg-card-hover); color: var(--text-main); }
+        .sidebar-link.active { background-color: rgba(59, 130, 246, 0.15); color: var(--primary); font-weight: 600; }
+        .sidebar-submenu {
+            margin-left: 1.25rem;
+            border-left: 2px solid rgba(255, 255, 255, 0.08);
+            padding-left: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            margin-top: 0.25rem;
+            margin-bottom: 0.25rem;
+        }
+        .sidebar-sublink {
+            display: flex; align-items: center; gap: 0.625rem; padding: 0.5rem 0.75rem;
+            color: var(--text-muted); text-decoration: none; font-size: 0.85rem; font-weight: 500;
+            border-radius: 8px; transition: all 0.2s ease;
+        }
+        .sidebar-sublink:hover { background-color: var(--bg-card-hover); color: var(--text-main); }
+        .sidebar-sublink.active { background-color: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 600; }
+
+        .sidebar-footer { padding: 1.25rem 1rem; border-top: 1px solid var(--border-color); background-color: rgba(0, 0, 0, 0.1); }
+        .user-profile { display: flex; align-items: center; justify-content: space-between; }
+        .user-details { font-size: 0.8125rem; }
+        .user-name { font-weight: 600; color: var(--text-main); display: block; }
+        .user-role { color: var(--text-muted); font-size: 0.75rem; }
+
+        .btn-logout {
+            background: rgba(239, 68, 68, 0.1); color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.2); padding: 0.5rem 0.75rem;
+            border-radius: 8px; cursor: pointer; font-size: 0.8125rem; font-weight: 600;
+            transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.375rem;
+        }
+        .btn-logout:hover { background: var(--accent-red); color: #fff; }
+
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            flex: 1; padding: 2rem 2.5rem; width: calc(100% - var(--sidebar-width));
+        }
+
+        .actions-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
+        .search-box { display: flex; gap: 0.5rem; flex: 1; max-width: 450px; }
+        .form-control { width: 100%; padding: 0.625rem 0.875rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); outline: none; }
+        .form-control:focus { border-color: var(--primary); }
+
+        .btn-primary { background-color: var(--primary); color: #fff; border: none; padding: 0.625rem 1.25rem; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-secondary { background: transparent; color: var(--text-muted); border: 1px solid var(--border-color); padding: 0.625rem 1.25rem; border-radius: 8px; cursor: pointer; }
+        .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 6px; }
+
+        .table-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; width: 100%; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background-color: rgba(0, 0, 0, 0.25); padding: 1rem 1.25rem; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; cursor: pointer; }
+        td { padding: 1.1rem 1.25rem; border-top: 1px solid var(--border-color); font-size: 0.9375rem; }
+        tr:hover td { background-color: rgba(255, 255, 255, 0.02); }
+
+        .badge { padding: 0.25rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .badge-ativo { background-color: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        /* Modais */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.75); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(5px); padding: 1.5rem; }
+        .modal { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 1.75rem; width: 100%; max-width: 650px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+        .modal-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; flex-shrink: 0; }
+        .modal-body { overflow-y: auto; padding-right: 0.35rem; flex: 1; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; }
+        .form-group { margin-bottom: 0.75rem; }
+        .form-group.full { grid-column: span 2; }
+        .form-group.col-3 { grid-column: span 1; }
+        .form-group label { display: block; margin-bottom: 0.25rem; font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; flex-shrink: 0; border-top: 1px solid var(--border-color); padding-top: 1rem; }
+
+        /* Toast Notification no Rodapé Direito */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .toast {
+            pointer-events: auto;
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-left: 5px solid var(--primary);
+            color: #f9fafb;
+            padding: 14px 18px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            min-width: 320px;
+            max-width: 420px;
+            position: relative;
+            overflow: hidden;
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .toast-inserir { border-left-color: var(--accent-green); }
+        .toast-alterar { border-left-color: var(--primary); }
+        .toast-deletar { border-left-color: var(--accent-red); }
+
+        .toast-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .toast-icon { font-size: 1.25rem; }
+
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .toast-progress-bar {
+            height: 100%;
+            width: 100%;
+            background: var(--primary);
+            animation: toastTimer linear forwards;
+        }
+
+        .toast-inserir .toast-progress-bar { background: var(--accent-green); }
+        .toast-alterar .toast-progress-bar { background: var(--primary); }
+        .toast-deletar .toast-progress-bar { background: var(--accent-red); }
+
+        @keyframes slideIn {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(120%); opacity: 0; }
+        }
+
+        @keyframes toastTimer {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+    <aside class="sidebar">
+        <div>
+            <div class="sidebar-brand">
+                ⚡ <span>OrderFlow</span>
+            </div>
+            <nav class="sidebar-menu">
+                {% if tem_permissao('projetos', 'ver') %}
+                <div class="sidebar-nav-group">
+                    <a href="/projetos" class="sidebar-link">
+                        <span>📁</span> Projetos & Branches
+                    </a>
+                    {% if tem_permissao('tenants', 'ver') %}
+                    <div class="sidebar-submenu">
+                        <a href="/instancias" class="sidebar-sublink">
+                            <span>🖥️</span> Instâncias (Tenants)
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% elif tem_permissao('tenants', 'ver') %}
+                <a href="/instancias" class="sidebar-link">
+                    <span>🖥️</span> Instâncias (Tenants)
+                </a>
+                {% endif %}
+                {% if tem_permissao('clientes', 'ver') %}
+                <a href="/clientes" class="sidebar-link active">
+                    <span>🏢</span> Clientes (Empresas)
+                </a>
+                {% endif %}
+                {% if tem_permissao('versoes', 'ver') %}
+                <a href="/versoes" class="sidebar-link">
+                    <span>🚀</span> Versões & Releases
+                </a>
+                {% endif %}
+                {% if tem_permissao('usuarios', 'ver') %}
+                <a href="/usuarios" class="sidebar-link">
+                    <span>👥</span> Usuários Admin
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="user-details">
+                    <span class="user-name">{{ session.get('admin_user_nome') }}</span>
+                    <span class="user-role">{{ session.get('admin_perfil')|upper }}</span>
+                </div>
+                <button class="btn-logout" onclick="confirmarSair()">
+                    🚪 Sair
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-wrapper">
+        <div class="actions-header">
+            <h2>Gestão de Clientes & Contratos</h2>
+            <div class="search-box">
+                <input type="text" id="inputBusca" class="form-control" placeholder="Buscar por Nome, CNPJ ou E-mail..." onkeyup="filtrarTabela()">
+            </div>
+            {% if tem_permissao('clientes', 'editar') %}
+            <button class="btn-primary" onclick="abrirModalNovo()">+ Novo Cliente</button>
+            {% endif %}
+        </div>
+
+        <div class="table-card">
+            <table id="tabelaClientes">
+                <thead>
+                    <tr>
+                        <th onclick="ordenarTabela(0)">Razão Social / Fantasia ⇕</th>
+                        <th onclick="ordenarTabela(1)">CNPJ / Contato ⇕</th>
+                        <th onclick="ordenarTabela(2)">Mensalidade Base ⇕</th>
+                        <th onclick="ordenarTabela(3)">Valor / Licença ⇕</th>
+                        <th onclick="ordenarTabela(4)">Vencimento / Início ⇕</th>
+                        <th>Tenants</th>
+                        <th>Status</th>
+                        {% if tem_permissao('clientes', 'editar') or tem_permissao('clientes', 'excluir') %}
+                        <th>Ações</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in clientes %}
+                    <tr>
+                        <td>
+                            <strong>{{ c.razao_social }}</strong><br>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">{{ c.nome_fantasia }}</span>
+                        </td>
+                        <td>
+                            {{ c.cnpj or '-' }}<br>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">{{ c.contato_nome or '' }}</span>
+                        </td>
+                        <td>
+                            <span style="font-weight: 700; color: var(--accent-green);">
+                                R$ {{ "%.2f"|format(c.valor_mensalidade or 0) }}
+                            </span>
+                        </td>
+                        <td>
+                            <span style="font-weight: 600; color: var(--primary);">
+                                R$ {{ "%.2f"|format(c.valor_por_licenca or 0) }}
+                            </span> / un
+                        </td>
+                        <td style="font-size: 0.85rem;">
+                            Dia {{ c.dia_vencimento or 10 }}<br>
+                            <span style="color: var(--text-muted);">{{ c.data_inicio_contrato or '-' }}</span>
+                        </td>
+                        <td>
+                            <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: var(--primary);">
+                                {{ c.total_tenants or 0 }} tenant(s)
+                            </span>
+                        </td>
+                        <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
+                        {% if tem_permissao('clientes', 'editar') or tem_permissao('clientes', 'excluir') %}
+                        <td>
+                            <div style="display: flex; gap: 0.375rem; align-items: center;">
+                                {% if tem_permissao('clientes', 'editar') %}
+                                <button class="btn-secondary btn-sm" onclick='editarCliente({{ c|tojson }})'>Editar</button>
+                                {% endif %}
+                                <button class="btn-secondary btn-sm" style="color: var(--accent-green); border-color: rgba(16,185,129,0.3);" onclick="verHistoricoContratos({{ c.id }}, '{{ c.nome_fantasia }}')">
+                                    📜 Histórico ({{ c.total_contratos or 0 }})
+                                </button>
+                                {% if tem_permissao('clientes', 'excluir') %}
+                                <button type="button" class="btn-danger btn-sm" style="padding: 5px 8px; border-radius: 4px;" onclick="confirmarExcluirCliente({{ c.id }}, '{{ c.nome_fantasia }}')" title="Excluir Cliente">🗑️</button>
+                                {% endif %}
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal Datagrid Histórico de Mudanças Contratuais -->
+    <div class="modal-overlay" id="modalHistoricoDatagrid">
+        <div class="modal" style="width: 92vw; max-width: 1150px; max-height: 88vh; display: flex; flex-direction: column;">
+            <div class="modal-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span id="titleHistoricoCliente">📜 Datagrid - Histórico de Mudanças Contratuais</span>
+                <button type="button" class="btn-secondary btn-sm" onclick="fecharModal('modalHistoricoDatagrid')">✕ Fechar</button>
+            </div>
+            
+            <div class="modal-body" style="padding-top: 0.5rem; overflow-y: auto;">
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                    Relatório completo com o histórico de alterações de valores, quantidade de licenças e aditivos contratuais.
+                </div>
+                <div id="containerHistoricoDatagrid" style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.75rem; min-height: 200px;">
+                    <p style="color: var(--text-muted); text-align: center; padding: 2rem 0;">Carregando histórico...</p>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="justify-content: flex-end;">
+                <button type="button" class="btn-secondary" onclick="fecharModal('modalHistoricoDatagrid')">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Editar Registro de Histórico Contratual -->
+    <div class="modal-overlay" id="modalEditarHistorico">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-title">✏️ Editar Registro de Histórico</div>
+            <form id="formEditarHistorico" onsubmit="salvarHistoricoForm(event)">
+                <input type="hidden" id="hist_id" name="historico_id">
+                <input type="hidden" id="hist_cliente_id" name="cliente_id">
+
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Data de Vigência *</label>
+                        <input type="date" id="hist_data_inicio" name="data_inicio" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Qtd. Licenças Contratadas</label>
+                        <input type="number" id="hist_qtd_licencas" name="qtd_licencas" class="form-control" required min="1" oninput="calcularMensalidadeHistorico()">
+                    </div>
+                    <div class="form-group">
+                        <label>Valor por Licença (R$)</label>
+                        <input type="number" step="0.01" id="hist_valor_por_licenca" name="valor_por_licenca" class="form-control" required oninput="calcularMensalidadeHistorico()">
+                    </div>
+                    <div class="form-group">
+                        <label>Valor SaaS (R$)</label>
+                        <input type="number" step="0.01" id="hist_valor_saas" name="valor_saas" class="form-control" required oninput="calcularMensalidadeHistorico()">
+                    </div>
+                    <div class="form-group">
+                        <label>Valor Mensalidade Base (R$) 🧮</label>
+                        <input type="number" step="0.01" id="hist_valor_mensalidade" name="valor_mensalidade" class="form-control" required readonly style="background: rgba(16, 185, 129, 0.1); color: var(--accent-green); font-weight: 700;">
+                    </div>
+                    <div class="form-group">
+                        <label>Dia Vencimento</label>
+                        <input type="number" id="hist_dia_vencimento" name="dia_vencimento" class="form-control" min="1" max="31" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Observação / Aditivo</label>
+                        <textarea id="hist_observacao" name="observacao" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalEditarHistorico')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar Alteração</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Validação / Confirmação de Exclusão de Histórico -->
+    <div class="modal-overlay" id="modalConfirmarExcluirHistorico">
+        <div class="modal" style="max-width: 400px; text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🗑️</div>
+            <div class="modal-title" style="margin-bottom: 0.5rem;">Excluir Registro de Histórico?</div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Esta ação removerá este aditivo do histórico de alterações do cliente.</p>
+            <input type="hidden" id="delete_hist_id">
+            <div class="modal-actions" style="justify-content: center; gap: 1rem;">
+                <button type="button" class="btn-secondary" onclick="fecharModal('modalConfirmarExcluirHistorico')">Cancelar</button>
+                <button type="button" class="btn-primary" style="background-color: var(--accent-red);" onclick="executarExclusaoHistorico()">Sim, Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Novo / Editar Cliente (Com Histórico Embutido na Metade Inferior) -->
+    <div class="modal-overlay" id="modalCliente">
+        <div class="modal" style="max-width: 820px; height: 90vh;">
+            <div class="modal-title" id="modalTitle" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Cadastrar Novo Cliente</span>
+                <span id="badgeContratoVersoes" class="badge" style="background: rgba(59, 130, 246, 0.15); color: var(--primary); display: none;"></span>
+            </div>
+
+            <form id="formCliente" action="/admin/cliente/salvar" method="POST" style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+                <input type="hidden" name="cliente_id" id="cli_id">
+
+                <div class="modal-body">
+                    <!-- METADE SUPERIOR: CAMPOS DO CADASTRO / CONTRATO -->
+                    <div style="font-size: 0.85rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 0.75rem; letter-spacing: 0.5px;">
+                        📝 Dados da Empresa & Termos Atuais do Contrato
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group full">
+                            <label>Razão Social *</label>
+                            <input type="text" name="razao_social" id="cli_razao" class="form-control" required placeholder="Razão Social completa...">
+                        </div>
+                        <div class="form-group">
+                            <label>Nome Fantasia *</label>
+                            <input type="text" name="nome_fantasia" id="cli_fantasia" class="form-control" required placeholder="Nome Fantasia...">
+                        </div>
+                        <div class="form-group">
+                            <label>CNPJ</label>
+                            <input type="text" name="cnpj" id="cli_cnpj" class="form-control" placeholder="00.000.000/0001-00">
+                        </div>
+                        <div class="form-group">
+                            <label>Nome do Contato / Resp.</label>
+                            <input type="text" name="contato_nome" id="cli_contato" class="form-control" placeholder="Responsável pelo contrato...">
+                        </div>
+                        <div class="form-group">
+                            <label>Telefone</label>
+                            <input type="text" name="telefone" id="cli_telefone" class="form-control" placeholder="(00) 00000-0000">
+                        </div>
+                        <div class="form-group full">
+                            <label>E-mail de Contato</label>
+                            <input type="email" name="email" id="cli_email" class="form-control" placeholder="contato@cliente.com.br">
+                        </div>
+                        
+                        <!-- Dados Financeiros & Gestão de Contrato -->
+                        <div class="form-group">
+                            <label>Qtd. Licenças Contratadas</label>
+                            <input type="number" name="qtd_licencas" id="cli_qtd_licencas" class="form-control" value="5" min="1" placeholder="ex: 10" oninput="calcularMensalidadeBase()">
+                        </div>
+                        <div class="form-group">
+                            <label>Valor por Licença (R$)</label>
+                            <input type="number" step="0.01" name="valor_por_licenca" id="cli_valor_licenca" class="form-control" placeholder="ex: 49.90" oninput="calcularMensalidadeBase()">
+                        </div>
+                        <div class="form-group">
+                            <label>Valor SaaS (R$)</label>
+                            <input type="number" step="0.01" name="valor_saas" id="cli_valor_saas" class="form-control" placeholder="ex: 100.00" oninput="calcularMensalidadeBase()">
+                        </div>
+                        <div class="form-group">
+                            <label>Valor Mensalidade Base (R$) 🧮</label>
+                            <input type="number" step="0.01" name="valor_mensalidade" id="cli_mensalidade" class="form-control" placeholder="Cálculo Automático..." readonly style="background: rgba(16, 185, 129, 0.1); color: var(--accent-green); font-weight: 700;">
+                        </div>
+                        <div class="form-group">
+                            <label>Dia Vencimento</label>
+                            <input type="number" name="dia_vencimento" id="cli_vencimento" class="form-control" min="1" max="31" value="10" placeholder="10">
+                        </div>
+                        <div class="form-group">
+                            <label>Data Início Versão</label>
+                            <input type="date" name="data_inicio_contrato" id="cli_inicio" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Status do Cliente</label>
+                            <select name="status" id="cli_status" class="form-control">
+                                <option value="ativo">Ativo</option>
+                                <option value="inativo">Inativo</option>
+                            </select>
+                        </div>
+                        <div class="form-group full">
+                            <label>Observações / Cláusulas</label>
+                            <textarea name="observacoes" id="cli_obs" class="form-control" rows="2" placeholder="Observações comerciais, aditivos, motivos de reajuste..."></textarea>
+                        </div>
+
+                        <div class="form-group full" id="boxRegistrarHistorico" style="background: rgba(59, 130, 246, 0.08); padding: 0.625rem 0.875rem; border-radius: 8px; border: 1px dashed rgba(59, 130, 246, 0.3);">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text-main); font-weight: 600; margin: 0;">
+                                <input type="checkbox" name="registrar_historico" value="1" checked style="width: 16px; height: 16px;">
+                                Registrar nova versão/aditivo no Histórico de Contratos abaixo ao salvar
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- METADE INFERIOR: TABELA DE HISTÓRICO DE MUDANÇAS -->
+                    <div id="secaoHistoricoBottom" style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+                        <div style="font-size: 0.85rem; font-weight: 700; color: var(--accent-green); text-transform: uppercase; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+                            <span>📜 Histórico de Mudanças Contratuais & Aditivos</span>
+                            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 400; text-transform: none;">Ordenado da alteração mais recente para a mais antiga</span>
+                        </div>
+                        <div id="containerHistoricoEmbedded" style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.75rem; min-height: 120px;">
+                            <p style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 1rem 0;">Selecione um cliente para carregar a tabela de histórico.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalCliente')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar Cliente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Validação / Confirmação de Sair -->
+    <div class="modal-overlay" id="modalConfirmarSair">
+        <div class="modal" style="max-width: 400px; text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🚪</div>
+            <div class="modal-title" style="margin-bottom: 0.5rem;">Deseja realmente sair?</div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Sua sessão no Painel Admin será encerrada.</p>
+            <div class="modal-actions" style="justify-content: center; gap: 1rem;">
+                <button type="button" class="btn-secondary" onclick="fecharModal('modalConfirmarSair')">Cancelar</button>
+                <a href="/logout" class="btn-primary" style="background-color: var(--accent-red);">Sim, Sair</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação Customizado para Excluir Cliente (Padrão do Sistema) -->
+    <div class="modal-overlay" id="modalConfirmacaoCliente">
+        <div class="modal" style="max-width: 440px; text-align: center;">
+            <div style="font-size: 2.6rem; margin-bottom: 0.6rem;">🗑️</div>
+            <div class="modal-title" style="margin-bottom: 0.6rem; justify-content: center; font-size: 1.25rem;">Excluir Cliente?</div>
+            <p id="modalConfirmTextoCliente" style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.6rem; line-height: 1.5;"></p>
+            <form id="formConfirmacaoCliente" method="POST" style="margin: 0;">
+                <div class="modal-actions" style="justify-content: center; gap: 1rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalConfirmacaoCliente')">Cancelar</button>
+                    <button type="submit" class="btn-primary" style="background-color: var(--accent-red);">Sim, Excluir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function confirmarExcluirCliente(id, nome) {
+            document.getElementById('modalConfirmTextoCliente').innerHTML = `Deseja realmente excluir o cliente <strong>${nome}</strong>?<br><br><span style="color: var(--text-muted); font-size: 0.85rem;">Esta ação só é permitida se não houver instâncias vinculadas.</span>`;
+            document.getElementById('formConfirmacaoCliente').action = `/admin/cliente/deletar/${id}`;
+            document.getElementById('modalConfirmacaoCliente').style.display = 'flex';
+        }
+        // Função Toast no Rodapé Direito com Timer
+        function showToast(message, type = 'inserir', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+
+            let icon = '✅';
+            if (type === 'alterar') icon = '✏️';
+            if (type === 'deletar') icon = '🗑️';
+
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <span class="toast-icon">${icon}</span>
+                    <span>${message}</span>
+                </div>
+                <div class="toast-progress">
+                    <div class="toast-progress-bar" style="animation-duration: ${duration}ms;"></div>
+                </div>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const msg = urlParams.get('msg');
+            const tipo = urlParams.get('tipo') || 'inserir';
+            if (msg) {
+                showToast(msg, tipo, 4000);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        });
+
+        function calcularMensalidadeBase() {
+            const qtd = parseFloat(document.getElementById('cli_qtd_licencas').value) || 0;
+            const vLic = parseFloat(document.getElementById('cli_valor_licenca').value) || 0;
+            const vSaas = parseFloat(document.getElementById('cli_valor_saas').value) || 0;
+            const total = (qtd * vLic) + vSaas;
+            document.getElementById('cli_mensalidade').value = total.toFixed(2);
+        }
+
+        function calcularMensalidadeHistorico() {
+            const qtd = parseFloat(document.getElementById('hist_qtd_licencas').value) || 0;
+            const vLic = parseFloat(document.getElementById('hist_valor_por_licenca').value) || 0;
+            const vSaas = parseFloat(document.getElementById('hist_valor_saas').value) || 0;
+            const total = (qtd * vLic) + vSaas;
+            document.getElementById('hist_valor_mensalidade').value = total.toFixed(2);
+        }
+
+        function confirmarSair() {
+            document.getElementById('modalConfirmarSair').style.display = 'flex';
+        }
+
+        function abrirModalNovo() {
+            document.getElementById('modalTitle').innerText = 'Cadastrar Novo Cliente';
+            document.getElementById('formCliente').reset();
+            document.getElementById('cli_id').value = '';
+            document.getElementById('badgeContratoVersoes').style.display = 'none';
+            document.getElementById('containerHistoricoEmbedded').innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 1rem 0;">Novo cadastro — O histórico de alterações será gerado após o salvamento.</p>';
+            calcularMensalidadeBase();
+            document.getElementById('modalCliente').style.display = 'flex';
+        }
+
+        function editarCliente(c) {
+            document.getElementById('modalTitle').innerText = 'Editar Cliente';
+            document.getElementById('cli_id').value = c.id;
+            document.getElementById('cli_razao').value = c.razao_social || '';
+            document.getElementById('cli_fantasia').value = c.nome_fantasia || '';
+            document.getElementById('cli_cnpj').value = c.cnpj || '';
+            document.getElementById('cli_contato').value = c.contato_nome || '';
+            document.getElementById('cli_telefone').value = c.telefone || '';
+            document.getElementById('cli_email').value = c.email || '';
+            document.getElementById('cli_qtd_licencas').value = c.qtd_licencas || 5;
+            document.getElementById('cli_valor_licenca').value = c.valor_por_licenca || '';
+            document.getElementById('cli_valor_saas').value = c.valor_saas || 0;
+            document.getElementById('cli_mensalidade').value = c.valor_mensalidade || '';
+            document.getElementById('cli_vencimento').value = c.dia_vencimento || 10;
+            document.getElementById('cli_inicio').value = c.data_inicio_contrato || '';
+            document.getElementById('cli_obs').value = c.observacoes || '';
+            document.getElementById('cli_status').value = c.status || 'ativo';
+            
+            calcularMensalidadeBase();
+            carregarHistoricoEmbedded(c.id);
+            document.getElementById('modalCliente').style.display = 'flex';
+        }
+
+        function carregarHistoricoEmbedded(clienteId) {
+            const container = document.getElementById('containerHistoricoEmbedded');
+            const badge = document.getElementById('badgeContratoVersoes');
+            container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem 0;">Carregando histórico de alterações...</p>';
+
+            fetch(`/admin/cliente/${clienteId}/historico`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.historico || data.historico.length === 0) {
+                        badge.style.display = 'none';
+                        container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 1rem 0;">Nenhuma alteração ou aditivo contratual registrado ainda.</p>';
+                        return;
+                    }
+
+                    badge.innerText = `${data.historico.length} versão(ões)`;
+                    badge.style.display = 'inline-block';
+
+                    let html = `
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid var(--border-color); text-align: left; color: var(--text-muted);">
+                                        <th style="padding: 6px 8px;">Data Início</th>
+                                        <th style="padding: 6px 8px;">Licenças</th>
+                                        <th style="padding: 6px 8px;">R$ / Lic.</th>
+                                        <th style="padding: 6px 8px;">Valor SaaS</th>
+                                        <th style="padding: 6px 8px;">Mensalidade Total</th>
+                                        <th style="padding: 6px 8px;">Venc.</th>
+                                        <th style="padding: 6px 8px;">Observação / Aditivo</th>
+                                        <th style="padding: 6px 8px;">Usuário</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+
+                    data.historico.forEach(h => {
+                        html += `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 8px; font-weight: 600; color: var(--primary); white-space: nowrap;">${h.data_inicio}</td>
+                                <td style="padding: 8px;"><span class="badge" style="background: rgba(59, 130, 246, 0.15); color: var(--primary);">${h.qtd_licencas} lic.</span></td>
+                                <td style="padding: 8px; font-weight: 600; white-space: nowrap;">R$ ${parseFloat(h.valor_por_licenca || 0).toFixed(2)}</td>
+                                <td style="padding: 8px; font-weight: 600; color: var(--primary); white-space: nowrap;">R$ ${parseFloat(h.valor_saas || 0).toFixed(2)}</td>
+                                <td style="padding: 8px; color: var(--accent-green); font-weight: 700; white-space: nowrap;">R$ ${parseFloat(h.valor_mensalidade || 0).toFixed(2)}</td>
+                                <td style="padding: 8px; white-space: nowrap;">Dia ${h.dia_vencimento || 10}</td>
+                                <td style="padding: 8px; color: var(--text-muted);">${h.observacao || '-'}</td>
+                                <td style="padding: 8px; font-size: 0.75rem; color: var(--text-muted); white-space: nowrap;">${h.criado_por || 'Sistema'}</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += '</tbody></table></div>';
+                    container.innerHTML = html;
+                })
+                .catch(err => {
+                    badge.style.display = 'none';
+                    container.innerHTML = `<p style="color: var(--accent-red); font-size: 0.85rem;">Erro ao carregar histórico: ${err}</p>`;
+                });
+        }
+
+        let currentHistoricoClienteId = null;
+        let currentHistoricoClienteNome = '';
+
+        function verHistoricoContratos(clienteId, nomeFantasia) {
+            currentHistoricoClienteId = clienteId;
+            currentHistoricoClienteNome = nomeFantasia;
+            document.getElementById('titleHistoricoCliente').innerText = `📜 Histórico de Mudanças Contratuais — ${nomeFantasia}`;
+            const container = document.getElementById('containerHistoricoDatagrid');
+            container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 2rem 0;">Carregando histórico de alterações...</p>';
+            document.getElementById('modalHistoricoDatagrid').style.display = 'flex';
+
+            const isAdmin = "{{ session.get('admin_perfil') }}" === "admin";
+
+            fetch(`/admin/cliente/${clienteId}/historico`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.historico || data.historico.length === 0) {
+                        container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 2rem 0;">Nenhuma alteração ou aditivo contratual registrado ainda.</p>';
+                        return;
+                    }
+
+                    let html = `
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid var(--border-color); text-align: left; color: var(--text-muted); background: rgba(255,255,255,0.02);">
+                                        <th style="padding: 10px 12px;">Data Vigência</th>
+                                        <th style="padding: 10px 12px;">Licenças</th>
+                                        <th style="padding: 10px 12px;">R$ / Lic.</th>
+                                        <th style="padding: 10px 12px;">Valor SaaS</th>
+                                        <th style="padding: 10px 12px;">Mensalidade Total</th>
+                                        <th style="padding: 10px 12px;">Dia Venc.</th>
+                                        <th style="padding: 10px 12px;">Observações / Aditivo</th>
+                                        <th style="padding: 10px 12px;">Usuário</th>
+                                        ${isAdmin ? '<th style="padding: 10px 12px; text-align: center;">Ações</th>' : ''}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+
+                    data.historico.forEach(h => {
+                        const hJson = JSON.stringify(h).replace(/'/g, "&apos;");
+                        html += `
+                            <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.15s ease;" onmouseover="this.style.background='rgba(59,130,246,0.05)'" onmouseout="this.style.background='transparent'">
+                                <td style="padding: 10px 12px; font-weight: 600; color: var(--primary); white-space: nowrap;">📅 ${h.data_inicio}</td>
+                                <td style="padding: 10px 12px;"><span class="badge" style="background: rgba(59, 130, 246, 0.15); color: var(--primary); font-weight: 700;">${h.qtd_licencas} lic.</span></td>
+                                <td style="padding: 10px 12px; font-weight: 600; white-space: nowrap;">R$ ${parseFloat(h.valor_por_licenca || 0).toFixed(2)}</td>
+                                <td style="padding: 10px 12px; font-weight: 600; color: var(--primary); white-space: nowrap;">R$ ${parseFloat(h.valor_saas || 0).toFixed(2)}</td>
+                                <td style="padding: 10px 12px; color: var(--accent-green); font-weight: 700; white-space: nowrap;">R$ ${parseFloat(h.valor_mensalidade || 0).toFixed(2)}</td>
+                                <td style="padding: 10px 12px; white-space: nowrap;">Dia ${h.dia_vencimento || 10}</td>
+                                <td style="padding: 10px 12px; color: var(--text-main); font-size: 0.85rem;">${h.observacao || '<i>Sem observações</i>'}</td>
+                                <td style="padding: 10px 12px; font-size: 0.8rem; color: var(--text-muted); white-space: nowrap;">👤 ${h.criado_por || 'Sistema'}</td>
+                                ${isAdmin ? `
+                                <td style="padding: 10px 12px; text-align: center; white-space: nowrap;">
+                                    <button class="btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.75rem;" onclick='editarRegistroHistorico(${hJson})'>✏️ Editar</button>
+                                    <button class="btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.75rem; color: var(--accent-red); border-color: rgba(239,68,68,0.3);" onclick="excluirRegistroHistorico(${h.id})">🗑️ Excluir</button>
+                                </td>
+                                ` : ''}
+                            </tr>
+                        `;
+                    });
+
+                    html += '</tbody></table></div>';
+                    container.innerHTML = html;
+                })
+                .catch(err => {
+                    container.innerHTML = `<p style="color: var(--accent-red); font-size: 0.9rem; text-align: center; padding: 1.5rem 0;">Erro ao carregar histórico: ${err}</p>`;
+                });
+        }
+
+        function editarRegistroHistorico(h) {
+            document.getElementById('hist_id').value = h.id;
+            document.getElementById('hist_cliente_id').value = h.cliente_id;
+            document.getElementById('hist_data_inicio').value = h.data_inicio;
+            document.getElementById('hist_qtd_licencas').value = h.qtd_licencas;
+            document.getElementById('hist_valor_por_licenca').value = h.valor_por_licenca;
+            document.getElementById('hist_valor_saas').value = h.valor_saas || 0;
+            document.getElementById('hist_valor_mensalidade').value = h.valor_mensalidade;
+            document.getElementById('hist_dia_vencimento').value = h.dia_vencimento || 10;
+            document.getElementById('hist_observacao').value = h.observacao || '';
+            calcularMensalidadeHistorico();
+            document.getElementById('modalEditarHistorico').style.display = 'flex';
+        }
+
+        function salvarHistoricoForm(event) {
+            event.preventDefault();
+            const formData = new FormData(document.getElementById('formEditarHistorico'));
+
+            fetch('/admin/historico/salvar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.sucesso) {
+                    fecharModal('modalEditarHistorico');
+                    showToast(res.mensagem, 'alterar', 4000);
+                    if (currentHistoricoClienteId) {
+                        verHistoricoContratos(currentHistoricoClienteId, currentHistoricoClienteNome);
+                    }
+                } else {
+                    alert(res.erro || 'Erro ao salvar histórico');
+                }
+            })
+            .catch(err => alert('Erro de comunicação: ' + err));
+        }
+
+        function excluirRegistroHistorico(histId) {
+            document.getElementById('delete_hist_id').value = histId;
+            document.getElementById('modalConfirmarExcluirHistorico').style.display = 'flex';
+        }
+
+        function executarExclusaoHistorico() {
+            const histId = document.getElementById('delete_hist_id').value;
+            if (!histId) return;
+
+            fetch(`/admin/historico/deletar/${histId}`, {
+                method: 'POST'
+            })
+            .then(r => r.json())
+            .then(res => {
+                fecharModal('modalConfirmarExcluirHistorico');
+                if (res.sucesso) {
+                    showToast(res.mensagem, 'deletar', 4000);
+                    if (currentHistoricoClienteId) {
+                        verHistoricoContratos(currentHistoricoClienteId, currentHistoricoClienteNome);
+                    }
+                } else {
+                    alert(res.erro || 'Erro ao excluir histórico');
+                }
+            })
+            .catch(err => alert('Erro de comunicação: ' + err));
+        }
+
+        function fecharModal(id) {
+            document.getElementById(id).style.display = 'none';
+            // Quando fechar o Datagrid de Histórico, recarrega a página para atualizar o contador da tabela principal (botão Histórico)
+            if (id === 'modalHistoricoDatagrid') {
+                window.location.reload();
+            }
+        }
+
+        function filtrarTabela() {
+            const input = document.getElementById("inputBusca").value.toUpperCase();
+            const trs = document.querySelectorAll("#tabelaClientes tbody tr");
+            trs.forEach(tr => {
+                const text = tr.innerText.toUpperCase();
+                tr.style.display = text.indexOf(input) > -1 ? "" : "none";
+            });
+        }
+
+        function ordenarTabela(n) {
+            const table = document.getElementById("tabelaClientes");
+            let rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            switching = true;
+            dir = "asc";
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+                    if (dir == "asc") {
+                        if (x.innerText.toLowerCase() > y.innerText.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else if (dir == "desc") {
+                        if (x.innerText.toLowerCase() < y.innerText.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount++;
+                } else {
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

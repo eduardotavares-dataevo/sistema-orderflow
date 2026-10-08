@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instâncias (Tenants) — OrderFlow Admin</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #0b0f19;
+            --bg-sidebar: #111827;
+            --bg-card: #1f2937;
+            --bg-card-hover: #374151;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --border-color: #374151;
+            --sidebar-width: 250px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; }
+
+        /* Barra Lateral (Sidebar Left) */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 1.5rem 1.25rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-brand span { color: var(--text-main); }
+
+        .sidebar-menu {
+            padding: 1.25rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+            flex: 1;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9375rem;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-link:hover {
+            background-color: var(--bg-card-hover);
+            color: var(--text-main);
+        }
+
+        .sidebar-link.active {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .sidebar-submenu {
+            margin-left: 1.25rem;
+            border-left: 2px solid rgba(255, 255, 255, 0.08);
+            padding-left: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            margin-top: 0.25rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .sidebar-sublink {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.5rem 0.75rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-sublink:hover {
+            background-color: var(--bg-card-hover);
+            color: var(--text-main);
+        }
+
+        .sidebar-sublink.active {
+            background-color: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            font-weight: 600;
+        }
+
+        .sidebar-footer {
+            padding: 1.25rem 1rem;
+            border-top: 1px solid var(--border-color);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .user-details { font-size: 0.8125rem; }
+        .user-name { font-weight: 600; color: var(--text-main); display: block; }
+        .user-role { color: var(--text-muted); font-size: 0.75rem; }
+
+        .btn-logout {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .btn-logout:hover {
+            background: var(--accent-red);
+            color: #fff;
+        }
+
+        /* Conteúdo Principal Expansível (Full Width) */
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 2rem 2.5rem;
+            width: calc(100% - var(--sidebar-width));
+        }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .stat-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 1.5rem; }
+        .stat-title { color: var(--text-muted); font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem; }
+        .stat-value { font-size: 2rem; font-weight: 700; }
+
+        .actions-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
+        .search-box { display: flex; gap: 0.75rem; flex: 1; max-width: 500px; }
+        .form-control { width: 100%; padding: 0.625rem 0.875rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); outline: none; }
+        .form-control:focus { border-color: var(--primary); }
+
+        .btn-primary { background-color: var(--primary); color: #fff; border: none; padding: 0.625rem 1.25rem; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-secondary { background: transparent; color: var(--text-muted); border: 1px solid var(--border-color); padding: 0.625rem 1.25rem; border-radius: 8px; cursor: pointer; }
+        .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 6px; }
+
+        /* Tabela Expansível 100% da Largura */
+        .table-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; width: 100%; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background-color: rgba(0, 0, 0, 0.25); padding: 1rem 1.25rem; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; cursor: pointer; user-select: none; }
+        th:hover { color: var(--text-main); }
+        td { padding: 1.1rem 1.25rem; border-top: 1px solid var(--border-color); font-size: 0.9375rem; }
+        tr:hover td { background-color: rgba(255, 255, 255, 0.02); }
+
+        .badge { padding: 0.25rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .badge-prod { background-color: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        .badge-teste { background-color: rgba(245, 158, 11, 0.15); color: var(--accent-amber); }
+        .badge-base { background-color: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); font-weight: 700; }
+        .badge-ativo { background-color: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        .badge-suspenso { background-color: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+
+        /* Modais */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.75); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(6px); }
+        .modal { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 2.25rem; width: 100%; max-width: 880px; max-height: 92vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6); }
+        .modal-title { font-size: 1.35rem; font-weight: 700; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+        .form-section-card { background: rgba(17, 24, 39, 0.6); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; }
+        .form-section-header { font-size: 0.875rem; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px dashed rgba(255,255,255,0.1); }
+        .form-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+        .form-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .form-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+        .form-group { margin-bottom: 0; }
+        .form-group.col-span-2 { grid-column: span 2; }
+        .form-group.col-span-3 { grid-column: span 3; }
+        .form-group.full { grid-column: 1 / -1; }
+        .form-group label { display: block; margin-bottom: 0.4rem; font-size: 0.82rem; font-weight: 500; color: var(--text-muted); }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem; }
+
+        /* Toast Notification no Rodapé Direito */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .toast {
+            pointer-events: auto;
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-left: 5px solid var(--primary);
+            color: #f9fafb;
+            padding: 14px 18px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            min-width: 320px;
+            max-width: 420px;
+            position: relative;
+            overflow: hidden;
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .toast-inserir { border-left-color: var(--accent-green); }
+        .toast-alterar { border-left-color: var(--primary); }
+        .toast-deletar { border-left-color: var(--accent-red); }
+
+        .toast-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .toast-icon { font-size: 1.25rem; }
+
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .toast-progress-bar {
+            height: 100%;
+            width: 100%;
+            background: var(--primary);
+            animation: toastTimer linear forwards;
+        }
+
+        .toast-inserir .toast-progress-bar { background: var(--accent-green); }
+        .toast-alterar .toast-progress-bar { background: var(--primary); }
+        .toast-deletar .toast-progress-bar { background: var(--accent-red); }
+
+        @keyframes slideIn {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(120%); opacity: 0; }
+        }
+
+        @keyframes toastTimer {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Container de Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Sidebar Esquerda -->
+    <aside class="sidebar">
+        <div>
+            <div class="sidebar-brand">
+                ⚡ <span>OrderFlow</span>
+            </div>
+            <nav class="sidebar-menu">
+                {% if tem_permissao('projetos', 'ver') %}
+                <div class="sidebar-nav-group">
+                    <a href="/projetos" class="sidebar-link">
+                        <span>📁</span> Projetos & Branches
+                    </a>
+                    {% if tem_permissao('tenants', 'ver') %}
+                    <div class="sidebar-submenu">
+                        <a href="/instancias" class="sidebar-sublink active">
+                            <span>🖥️</span> Instâncias (Tenants)
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% elif tem_permissao('tenants', 'ver') %}
+                <a href="/instancias" class="sidebar-link active">
+                    <span>🖥️</span> Instâncias (Tenants)
+                </a>
+                {% endif %}
+                {% if tem_permissao('clientes', 'ver') %}
+                <a href="/clientes" class="sidebar-link">
+                    <span>🏢</span> Clientes (Empresas)
+                </a>
+                {% endif %}
+                {% if tem_permissao('versoes', 'ver') %}
+                <a href="/versoes" class="sidebar-link">
+                    <span>🚀</span> Versões & Releases
+                </a>
+                {% endif %}
+                {% if tem_permissao('usuarios', 'ver') %}
+                <a href="/usuarios" class="sidebar-link">
+                    <span>👥</span> Usuários Admin
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="user-details">
+                    <span class="user-name">{{ session.get('admin_user_nome') }}</span>
+                    <span class="user-role">{{ session.get('admin_perfil')|upper }}</span>
+                </div>
+                <button class="btn-logout" onclick="confirmarSair()">
+                    🚪 Sair
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Área Principal de Conteúdo -->
+    <main class="main-wrapper">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">Instâncias Cadastradas</div>
+                <div class="stat-value">{{ tenants|length }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Licenças Vendidas Totais</div>
+                <div class="stat-value" style="color: var(--primary);">
+                    {% set total_lic = namespace(val=0) %}
+                    {% for t in tenants %}{% set total_lic.val = total_lic.val + t.max_licencas %}{% endfor %}
+                    {{ total_lic.val }}
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Sessões Ativas em Tempo Real</div>
+                <div class="stat-value" style="color: var(--accent-green);">{{ total_active_sessions }}</div>
+            </div>
+        </div>
+
+        <!-- Breadcrumb e Contexto de Projeto -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; color: var(--text-muted);">
+                <a href="/projetos" style="color: #38bdf8; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                    📁 Projetos & Branches
+                </a>
+                <span>/</span>
+                {% if projeto_selecionado %}
+                <span style="color: var(--text-main); font-weight: 700; background: rgba(56, 189, 248, 0.12); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.25);">
+                    📦 {{ projeto_selecionado.nome_projeto }} ({{ projeto_selecionado.branch_git }})
+                </span>
+                <span>/</span>
+                {% endif %}
+                <span style="color: #f8fafc; font-weight: 600;">🖥️ Instâncias (Tenants)</span>
+            </div>
+            {% if projeto_selecionado %}
+            <a href="/projetos" class="btn-secondary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                ← Voltar para Todos os Projetos
+            </a>
+            {% endif %}
+        </div>
+
+        {% if projeto_selecionado %}
+        <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 12px; padding: 14px 18px; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 14px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(56, 189, 248, 0.2); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                    📁
+                </div>
+                <div>
+                    <div style="font-weight: 700; color: #f8fafc; font-size: 1.05rem;">
+                        Projeto: {{ projeto_selecionado.nome_projeto }}
+                        <span style="font-size: 0.8rem; color: #38bdf8; font-family: monospace; margin-left: 6px;">[{{ projeto_selecionado.codigo_slug }}]</span>
+                    </div>
+                    <div style="font-size: 0.82rem; color: var(--text-muted); display: flex; gap: 12px; margin-top: 3px; flex-wrap: wrap;">
+                        <span><strong style="color: #c084fc;">Branch:</strong> {{ projeto_selecionado.branch_git }}</span>
+                        {% if projeto_selecionado.cliente_nome %}
+                        <span>• <strong style="color: #38bdf8;">Cliente:</strong> {{ projeto_selecionado.cliente_nome }}</span>
+                        {% endif %}
+                        <span>• <strong style="color: #10b981;">{{ tenants|length }}</strong> instância(s) deste projeto</span>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <a href="/instancias" class="btn-secondary btn-sm" style="text-decoration: none;">
+                    Ver Todas as Instâncias
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="actions-header">
+            <h2>
+                {% if projeto_selecionado %}
+                Instâncias do Projeto {{ projeto_selecionado.nome_projeto }}
+                {% else %}
+                Instâncias (Tenants)
+                {% endif %}
+            </h2>
+            <div class="search-box">
+                <input type="text" id="inputBusca" class="form-control" placeholder="Buscar por ID, Nome da Empresa ou URL..." onkeyup="filtrarTabela()">
+                <select id="filtroProjeto" class="form-control" style="max-width: 190px;" onchange="filtrarPorProjeto(this.value)">
+                    <option value="">Todos Projetos</option>
+                    {% for p in projetos %}
+                    <option value="{{ p.id }}" {% if projeto_selecionado and projeto_selecionado.id == p.id %}selected{% endif %}>
+                        📁 {{ p.nome_projeto }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <select id="filtroAmbiente" class="form-control" style="max-width: 170px;" onchange="filtrarTabela()">
+                    <option value="">Todos Ambientes</option>
+                    <option value="base">🏢 Base</option>
+                    <option value="teste">🧪 Teste</option>
+                    <option value="producao">🚀 Produção</option>
+                </select>
+            </div>
+            {% if tem_permissao('tenants', 'editar') %}
+            <button class="btn-primary" onclick="abrirModalNovo()">+ Novo Tenant</button>
+            {% else %}
+            <span style="font-size: 0.85rem; color: var(--accent-amber);">Modo Leitura (Uso Restrito)</span>
+            {% endif %}
+        </div>
+
+        <!-- Tabela Expansível -->
+        <div class="table-card">
+            <table id="tabelaTenants">
+                <thead>
+                    <tr>
+                        <th onclick="ordenarTabela(0)">Tenant ID / Nome ⇕</th>
+                        <th onclick="ordenarTabela(1)">Cliente Associado ⇕</th>
+                        <th onclick="ordenarTabela(2)">Ambiente ⇕</th>
+                        <th onclick="ordenarTabela(3)">IP / Link Externo ⇕</th>
+                        <th onclick="ordenarTabela(4)">Porta ⇕</th>
+                        <th onclick="ordenarTabela(5)">Licenças ⇕</th>
+                        <th onclick="ordenarTabela(6)">Super Admin ⇕</th>
+                        <th onclick="ordenarTabela(7)">Status ⇕</th>
+                        {% if tem_permissao('tenants', 'editar') or tem_permissao('tenants', 'excluir') %}
+                        <th>Ações</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tenants %}
+                    <tr data-ambiente="{{ t.ambiente }}">
+                        <td>
+                            <strong>{{ t.tenant_id }}</strong><br>
+                            <span style="font-size: 0.85rem; color: var(--text-muted);">{{ t.nome_empresa }}</span>
+                            <div style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
+                                {% if t.nome_projeto %}
+                                <a href="/instancias?projeto_id={{ t.projeto_id }}" class="badge" style="background: rgba(139, 92, 246, 0.15); color: #c084fc; font-size: 0.7rem; font-weight: 600; text-decoration: none;" title="Projeto: {{ t.nome_projeto }} (Branch: {{ t.projeto_branch }})">
+                                    📁 {{ t.nome_projeto }} ({{ t.projeto_branch or 'main' }})
+                                </a>
+                                {% endif %}
+                                {% if t.modulos_lista %}
+                                    <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 0.7rem; font-weight: 500;" title="Módulos Habilitados: {{ t.modulos_lista|join(', ') }}">
+                                        🧭 {{ t.modulos_lista|length }} menus ativos
+                                    </span>
+                                {% else %}
+                                    <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 0.7rem; font-weight: 500;" title="Todos os menus liberados por padrão">
+                                        🧭 Todos os menus
+                                    </span>
+                                {% endif %}
+                                <span class="badge" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8; font-size: 0.7rem; font-weight: 600; font-family: monospace;" title="Versão atual do OrderFlow">
+                                    🏷️ {{ t.versao_atual or 'v1.0.1' }}
+                                </span>
+                                <a href="javascript:void(0)" onclick="alternarDetalhes('detalhe_{{ t.id }}')" style="font-size: 0.75rem; color: var(--primary); text-decoration: none; font-weight: 600;">
+                                    🔍 Detalhes ▾
+                                </a>
+                            </div>
+                        </td>
+                        <td>{{ t.cliente_nome or 'Não vinculado' }}</td>
+                        <td>
+                            {% if t.ambiente == 'producao' %}
+                            <span class="badge badge-prod">🚀 Produção</span>
+                            {% elif t.ambiente == 'base' %}
+                            <span class="badge badge-base">🏢 Base</span>
+                            {% else %}
+                            <span class="badge badge-teste">🧪 Teste</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if t.ip_externo %}
+                                {% if t.ip_externo.startswith('https://') or t.ip_externo.startswith('http://') %}
+                                    {% set final_url = t.ip_externo.rstrip('/') ~ '/login?forcar_login=1' %}
+                                    {% set display_url = t.ip_externo.rstrip('/') ~ '/login' %}
+                                {% elif '.' in t.ip_externo and not t.ip_externo.replace('.', '').isdigit() %}
+                                    {% set final_url = 'https://' ~ t.ip_externo.rstrip('/') ~ '/login?forcar_login=1' %}
+                                    {% set display_url = 'https://' ~ t.ip_externo.rstrip('/') ~ '/login' %}
+                                {% else %}
+                                    {% set final_url = 'http://' ~ t.ip_externo.rstrip('/') ~ ':' ~ t.porta ~ '/login?forcar_login=1' %}
+                                    {% set display_url = 'http://' ~ t.ip_externo.rstrip('/') ~ ':' ~ t.porta ~ '/login' %}
+                                {% endif %}
+                                <a href="{{ final_url }}" target="_blank" style="color: #38bdf8; font-weight: 700; text-decoration: none;" title="Acessar Tenant">
+                                    {{ display_url }} 🔗
+                                </a>
+                            {% else %}
+                                <span style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">Não configurado</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span style="font-weight: 700; font-family: monospace; font-size: 0.92rem; color: #f59e0b; background: rgba(245, 158, 11, 0.1); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.25);">
+                                {{ t.porta or '-' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                                <div style="font-weight: 700; font-size: 0.95rem;">
+                                    {% if t.sessoes_ativas >= t.max_licencas %}
+                                    <span style="color: var(--accent-red);" title="Limite máximo atingido!">⚠️ {{ t.sessoes_ativas }} / {{ t.max_licencas }}</span>
+                                    {% elif t.sessoes_ativas > 0 %}
+                                    <span style="color: var(--accent-green);">🟢 {{ t.sessoes_ativas }} / {{ t.max_licencas }}</span>
+                                    {% else %}
+                                    <span style="color: var(--text-muted);">⚪ 0 / {{ t.max_licencas }}</span>
+                                    {% endif %}
+                                </div>
+                                {% if tem_permissao('tenants', 'acoes') and t.sessoes_ativas > 0 %}
+                                <button type="button" class="btn-danger btn-sm" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 4px; white-space: nowrap;" onclick="confirmarMatarSessoes('{{ t.tenant_id }}', '{{ t.nome_empresa }}', {{ t.sessoes_ativas }})" title="Derrubar todas as sessões ativas deste tenant">
+                                    ⚡ Matar Sessões
+                                </button>
+                                {% endif %}
+                            </div>
+                            <div style="width: 100px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 4px; overflow: hidden;">
+                                {% set pct = (t.sessoes_ativas / t.max_licencas * 100) if t.max_licencas > 0 else 0 %}
+                                <div style="height: 100%; width: {{ pct if pct <= 100 else 100 }}%; background: {% if pct >= 100 %}var(--accent-red){% elif pct > 0 %}var(--accent-green){% else %}transparent{% endif %};"></div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: #38bdf8;">
+                                👤 {{ t.superadmin_user or 'admin' }}
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 4px; margin-top: 3px;">
+                                <code id="pass_view_{{ t.id }}" data-real-pass="{{ t.superadmin_password or '' }}" style="font-size: 0.75rem; background: rgba(0,0,0,0.3); padding: 2px 5px; border-radius: 3px; font-family: monospace; letter-spacing: 1px; color: #a3e635;">••••••••</code>
+                                <button type="button" onclick="alternarVisibilidadeSenhaTabela({{ t.id }})" id="btn_eye_{{ t.id }}" title="Visualizar / Ocultar Senha" style="background: none; border: none; cursor: pointer; font-size: 0.8rem; padding: 0 2px;">👁️</button>
+                                <button type="button" onclick="navigator.clipboard.writeText('{{ t.superadmin_password or '' }}'); showToast('Senha copiada!', 'info', 2000);" title="Copiar Senha" style="background: none; border: none; cursor: pointer; font-size: 0.8rem; padding: 0 2px;">📋</button>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-{{ t.status }}">{{ t.status }}</span></td>
+                        {% if tem_permissao('tenants', 'editar') or tem_permissao('tenants', 'excluir') %}
+                        <td>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                {% if tem_permissao('tenants', 'editar') %}
+                                <button class="btn-secondary btn-sm" onclick='editarTenant({{ t|tojson }})'>Editar</button>
+                                {% endif %}
+                                {% if tem_permissao('tenants', 'excluir') %}
+                                <button type="button" class="btn-danger btn-sm" style="padding: 5px 8px; border-radius: 4px;" onclick="confirmarExcluirTenant({{ t.id }}, '{{ t.nome_empresa }}', '{{ t.tenant_id }}')" title="Excluir Instância">🗑️</button>
+                                {% endif %}
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal Novo / Editar Tenant -->
+    <div class="modal-overlay" id="modalTenant">
+        <div class="modal">
+            <div class="modal-title" id="modalTenantTitle">Cadastrar Novo Tenant</div>
+            <form id="formTenant" action="/admin/tenant/salvar" method="POST">
+                <input type="hidden" name="id" id="t_id">
+                
+                <!-- Card 1: Informações Principais & Vínculo -->
+                <div class="form-section-card">
+                    <div class="form-section-header">
+                        <i class="fa-solid fa-building"></i> 1. Identificação da Instância & Vínculo
+                    </div>
+                    <div class="form-grid-3">
+                        <div class="form-group col-span-3">
+                            <label>Cliente da Empresa (Vínculo Contratual)</label>
+                            <select name="cliente_id" id="t_cliente" class="form-control" onchange="atualizarLicencasDoCliente()">
+                                <option value="">-- Selecione o Cliente da Empresa (Opcional) --</option>
+                                {% for c in clientes %}
+                                <option value="{{ c.id }}" data-licencas="{{ c.ultimo_contrato_licencas if c.ultimo_contrato_licencas is not none else 5 }}">{{ c.nome_fantasia }} ({{ c.razao_social }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tenant ID (Identificador Único)</label>
+                            <input type="text" name="tenant_id" id="t_tenant_id" class="form-control" required placeholder="ex: autogiro_prod">
+                        </div>
+                        <div class="form-group col-span-2">
+                            <label>Nome Fantasia / Descrição da Instância</label>
+                            <input type="text" name="nome_empresa" id="t_nome_empresa" class="form-control" required placeholder="ex: Auto Giro Distribuidora (Produção)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Ambiente, Licenciamento & Infraestrutura -->
+                <div class="form-section-card">
+                    <div class="form-section-header">
+                        <i class="fa-solid fa-server"></i> 2. Infraestrutura, Licenciamento & Integração Sankhya
+                    </div>
+                    <div class="form-grid-4">
+                        <div class="form-group">
+                            <label>Ambiente</label>
+                            <select name="ambiente" id="t_ambiente" class="form-control" required onchange="sugerirPortaPorAmbiente()">
+                                <option value="base">🏢 Base</option>
+                                <option value="teste">🧪 Teste</option>
+                                <option value="producao">🚀 Produção</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Porta de Execução</label>
+                            <input type="number" name="porta" id="t_porta" class="form-control" placeholder="Automático (Base: 5010, Prod: 6010, Teste: 7010)">
+                        </div>
+                        <div class="form-group col-span-2">
+                            <label>IP para Acesso Externo</label>
+                            <input type="text" name="ip_externo" id="t_ip_externo" class="form-control" placeholder="ex: 143.95.163.67 ou meu-dominio.com.br">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Licenças Contratadas <small style="color: #94a3b8; font-weight: normal;">(Último Contrato do Cliente)</small></label>
+                            <input type="number" name="max_licencas" id="t_max_licencas" class="form-control" readonly style="background-color: rgba(15, 23, 42, 0.6); cursor: not-allowed; opacity: 0.85; color: #94a3b8; border-color: #334155;" title="O número de licenças é obtido automaticamente do último histórico de contrato do cadastro do cliente. Campo desabilitado para edição." required value="5" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Validade do Contrato</label>
+                            <input type="date" name="validade_licenca" id="t_validade" class="form-control" value="2027-12-31">
+                        </div>
+                        <div class="form-group col-span-2">
+                            <label>URL do Servidor Sankhya (Endereço Completo)</label>
+                            <input type="text" name="sankhya_url" id="t_sankhya_url" class="form-control" required placeholder="https://servidor.sankhya.com.br:8035">
+                        </div>
+
+                        <div class="form-group col-span-2">
+                            <label>Projeto (Vínculo de Código & Branch)</label>
+                            <select name="projeto_id" id="t_projeto_id" class="form-control">
+                                <option value="">-- Selecione o Projeto (Opcional) --</option>
+                                {% for p in projetos %}
+                                <option value="{{ p.id }}">{{ p.nome_projeto }} (Branch: {{ p.branch_git }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group col-span-2">
+                            <label>Versão Instalada / Atual</label>
+                            <select name="versao_atual" id="t_versao_atual" class="form-control">
+                                {% for v in versoes %}
+                                <option value="{{ v.tag_versao }}">{{ v.tag_versao }} — {{ v.titulo }} ({{ v.branch }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group col-span-2">
+                            <label>Token Sankhya (AppKey)</label>
+                            <input type="text" name="sankhya_appkey" id="t_sankhya_appkey" class="form-control" placeholder="Token Sankhya...">
+                        </div>
+                        <div class="form-group col-span-2">
+                            <label>Status da Instância</label>
+                            <select name="status" id="t_status" class="form-control">
+                                <option value="ativo">🟢 Ativo</option>
+                                <option value="suspenso">🟡 Suspenso</option>
+                                <option value="bloqueado">🔴 Bloqueado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Credenciais do Super Admin -->
+                <div class="form-section-card">
+                    <div class="form-section-header" style="color: #38bdf8;">
+                        <i class="fa-solid fa-shield-halved"></i> 3. Credenciais de Acesso Super Admin (OrderFlow)
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>Usuário Super Admin</label>
+                            <input type="text" name="superadmin_user" id="t_superadmin_user" class="form-control" value="admin" required placeholder="ex: admin">
+                        </div>
+                        <div class="form-group">
+                            <label>Senha do Super Admin</label>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <input type="password" name="superadmin_password" id="t_superadmin_password" class="form-control" required placeholder="Senha forte..." style="font-family: monospace; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.5px;">
+                                <button type="button" class="btn-secondary" onclick="alternarVisibilidadeSenha()" id="btnEyeSenha" style="padding: 0 10px; height: 38px;" title="Visualizar / Ocultar Senha">👁️</button>
+                                <button type="button" class="btn-secondary" onclick="gerarNovaSenhaForte()" style="padding: 0 10px; height: 38px;" title="Gerar Senha Forte Aleatória">🎲</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 4: Gerenciador de Menus do OrderFlow -->
+                <div class="form-section-card" style="border-color: rgba(168, 85, 247, 0.4); background: rgba(168, 85, 247, 0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed rgba(168, 85, 247, 0.25);">
+                        <div>
+                            <span style="font-weight: 700; font-size: 0.92rem; color: #c084fc; display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-compass"></i> 4. Gerenciador de Menus & Telas Contratadas
+                            </span>
+                            <span style="font-size: 0.78rem; color: var(--text-muted); display: block; margin-top: 2px;">
+                                Marque as telas e módulos que estarão liberados no menu lateral e de navegação desta instância:
+                            </span>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" class="btn-secondary" onclick="selecionarTodosModulos(true)" style="padding: 4px 10px; font-size: 0.75rem; background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.4); color: #e9d5ff;">✓ Marcar Todos</button>
+                            <button type="button" class="btn-secondary" onclick="selecionarTodosModulos(false)" style="padding: 4px 10px; font-size: 0.75rem; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #fca5a5;">✕ Desmarcar</button>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;">
+                        <label style="display: flex; align-items: center; gap: 10px; font-size: 0.86rem; color: #f3f4f6; cursor: pointer; user-select: none; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; transition: border-color 0.2s;">
+                            <input type="checkbox" name="modulos[]" value="inicio" class="chk-modulo" checked style="width: 17px; height: 17px; accent-color: var(--primary);">
+                            <div>
+                                <strong style="display: block; font-size: 0.88rem;">🏠 Início</strong>
+                                <small style="color: var(--text-muted); font-size: 0.75rem;">Dashboard Inicial</small>
+                            </div>
+                        </label>
+
+                        <label style="display: flex; align-items: center; gap: 10px; font-size: 0.86rem; color: #f3f4f6; cursor: pointer; user-select: none; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; transition: border-color 0.2s;">
+                            <input type="checkbox" name="modulos[]" value="portal_vendas" class="chk-modulo" checked style="width: 17px; height: 17px; accent-color: var(--primary);">
+                            <div>
+                                <strong style="display: block; font-size: 0.88rem;">📋 Central de Pedidos</strong>
+                                <small style="color: var(--text-muted); font-size: 0.75rem;">Portal de Vendas & Pedidos</small>
+                            </div>
+                        </label>
+
+                        <label style="display: flex; align-items: center; gap: 10px; font-size: 0.86rem; color: #f3f4f6; cursor: pointer; user-select: none; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; transition: border-color 0.2s;">
+                            <input type="checkbox" name="modulos[]" value="consulta_produtos" class="chk-modulo" checked style="width: 17px; height: 17px; accent-color: var(--primary);">
+                            <div>
+                                <strong style="display: block; font-size: 0.88rem;">🔍 Consulta de Produtos</strong>
+                                <small style="color: var(--text-muted); font-size: 0.75rem;">Consulta Rápida / Estoque / Preço</small>
+                            </div>
+                        </label>
+
+                        <label style="display: flex; align-items: center; gap: 10px; font-size: 0.86rem; color: #f3f4f6; cursor: pointer; user-select: none; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; transition: border-color 0.2s;">
+                            <input type="checkbox" name="modulos[]" value="promocoes" class="chk-modulo" checked style="width: 17px; height: 17px; accent-color: var(--primary);">
+                            <div>
+                                <strong style="display: block; font-size: 0.88rem;">🏷️ Promoções</strong>
+                                <small style="color: var(--text-muted); font-size: 0.75rem;">Campanhas, Descontos & Ofertas</small>
+                            </div>
+                        </label>
+
+                        <label style="display: flex; align-items: center; gap: 10px; font-size: 0.86rem; color: #f3f4f6; cursor: pointer; user-select: none; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; transition: border-color 0.2s;">
+                            <input type="checkbox" name="modulos[]" value="bi" class="chk-modulo" checked style="width: 17px; height: 17px; accent-color: var(--primary);">
+                            <div>
+                                <strong style="display: block; font-size: 0.88rem;">📊 Dashboard / BI</strong>
+                                <small style="color: var(--text-muted); font-size: 0.75rem;">Indicadores Gráficos de Vendas</small>
+                            </div>
+                        </label>
+
+                        <label style="display: flex; align-items: center; gap: 10px; font-size: 0.86rem; color: #f3f4f6; cursor: pointer; user-select: none; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; transition: border-color 0.2s;">
+                            <input type="checkbox" name="modulos[]" value="configuracoes" class="chk-modulo" checked style="width: 17px; height: 17px; accent-color: var(--primary);">
+                            <div>
+                                <strong style="display: block; font-size: 0.88rem;">⚙️ Configurações</strong>
+                                <small style="color: var(--text-muted); font-size: 0.75rem;">Preferências & Parâmetros</small>
+                            </div>
+                        </label>
+
+                        <label style="display: flex; align-items: center; gap: 10px; font-size: 0.86rem; color: #f3f4f6; cursor: pointer; user-select: none; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; transition: border-color 0.2s;">
+                            <input type="checkbox" name="modulos[]" value="acessos" class="chk-modulo" checked style="width: 17px; height: 17px; accent-color: var(--primary);">
+                            <div>
+                                <strong style="display: block; font-size: 0.88rem;">🛡️ Gestão de Acessos</strong>
+                                <small style="color: var(--text-muted); font-size: 0.75rem;">Usuários, Grupos & Sessões</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalTenant')">Cancelar</button>
+                    <button type="submit" class="btn-primary" style="padding: 0.625rem 1.75rem; font-size: 0.95rem;">Salvar Instância</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Validação / Confirmação de Sair -->
+    <div class="modal-overlay" id="modalConfirmarSair">
+        <div class="modal" style="max-width: 400px; text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🚪</div>
+            <div class="modal-title" style="margin-bottom: 0.5rem; justify-content: center;">Deseja realmente sair?</div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Sua sessão no Painel Admin será encerrada.</p>
+            <div class="modal-actions" style="justify-content: center; gap: 1rem;">
+                <button type="button" class="btn-secondary" onclick="fecharModal('modalConfirmarSair')">Cancelar</button>
+                <a href="/logout" class="btn-primary" style="background-color: var(--accent-red);">Sim, Sair</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação Customizado para Ações (Padrão do Sistema) -->
+    <div class="modal-overlay" id="modalConfirmacaoAcao">
+        <div class="modal" style="max-width: 440px; text-align: center;">
+            <div id="modalConfirmIcon" style="font-size: 2.6rem; margin-bottom: 0.6rem;">⚡</div>
+            <div class="modal-title" id="modalConfirmTitulo" style="margin-bottom: 0.6rem; justify-content: center; font-size: 1.25rem;">Confirmar Ação</div>
+            <p id="modalConfirmTexto" style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.6rem; line-height: 1.5;"></p>
+            <form id="formConfirmacaoAcao" method="POST" style="margin: 0;">
+                <input type="hidden" name="tenant_id" id="modalConfirmTenantId" value="">
+                <div class="modal-actions" style="justify-content: center; gap: 1rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalConfirmacaoAcao')">Cancelar</button>
+                    <button type="submit" id="btnModalConfirmSubmit" class="btn-primary" style="background-color: var(--accent-red);">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function confirmarMatarSessoes(tenantId, nomeEmpresa, sessoesAtivas) {
+            document.getElementById('modalConfirmIcon').innerText = '⚡';
+            document.getElementById('modalConfirmTitulo').innerText = 'Derrubar Sessões Ativas?';
+            document.getElementById('modalConfirmTexto').innerHTML = `Deseja realmente derrubar todas as <strong>${sessoesAtivas}</strong> sessões ativas do tenant <strong>${nomeEmpresa}</strong>?`;
+            
+            const form = document.getElementById('formConfirmacaoAcao');
+            form.action = '/admin/tenant/matar-todas-sessoes';
+            
+            const inp = document.getElementById('modalConfirmTenantId');
+            inp.name = 'tenant_id';
+            inp.value = tenantId;
+            
+            const btn = document.getElementById('btnModalConfirmSubmit');
+            btn.innerText = 'Sim, Derrubar Sessões';
+            btn.style.backgroundColor = 'var(--accent-red)';
+            
+            document.getElementById('modalConfirmacaoAcao').style.display = 'flex';
+        }
+
+        function confirmarExcluirTenant(id, nomeEmpresa, tenantId) {
+            document.getElementById('modalConfirmIcon').innerText = '🗑️';
+            document.getElementById('modalConfirmTitulo').innerText = 'Excluir Instância?';
+            document.getElementById('modalConfirmTexto').innerHTML = `Deseja realmente excluir a instância <strong>${nomeEmpresa}</strong> (<code>${tenantId}</code>)?<br><br><span style="color: var(--accent-red); font-weight: 600;">Esta ação é irreversível.</span>`;
+            
+            const form = document.getElementById('formConfirmacaoAcao');
+            form.action = `/admin/tenant/deletar/${id}`;
+            
+            const inp = document.getElementById('modalConfirmTenantId');
+            inp.name = '';
+            inp.value = '';
+            
+            const btn = document.getElementById('btnModalConfirmSubmit');
+            btn.innerText = 'Sim, Excluir Instância';
+            btn.style.backgroundColor = 'var(--accent-red)';
+            
+            document.getElementById('modalConfirmacaoAcao').style.display = 'flex';
+        }
+        // Função Toast com Barra Temporizadora no Rodapé Direito
+        function showToast(message, type = 'inserir', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+
+            let icon = '✅';
+            if (type === 'alterar') icon = '✏️';
+            if (type === 'deletar') icon = '🗑️';
+
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <span class="toast-icon">${icon}</span>
+                    <span>${message}</span>
+                </div>
+                <div class="toast-progress">
+                    <div class="toast-progress-bar" style="animation-duration: ${duration}ms;"></div>
+                </div>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        // Verifica mensagens Flash via URL (msg e tipo)
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const msg = urlParams.get('msg');
+            const tipo = urlParams.get('tipo') || 'inserir';
+            if (msg) {
+                showToast(msg, tipo, 4000);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        });
+
+        function confirmarSair() {
+            document.getElementById('modalConfirmarSair').style.display = 'flex';
+        }
+
+        function selecionarTodosModulos(marcar) {
+            document.querySelectorAll('.chk-modulo').forEach(chk => {
+                chk.checked = marcar;
+            });
+        }
+
+        function abrirModalNovo() {
+            document.getElementById('modalTenantTitle').innerText = 'Cadastrar Novo Tenant';
+            document.getElementById('formTenant').reset();
+            document.getElementById('t_id').value = '';
+            document.getElementById('t_tenant_id').readOnly = false;
+            document.getElementById('t_ip_externo').value = '';
+            document.getElementById('t_max_licencas').value = '5';
+            document.getElementById('t_max_licencas').readOnly = true;
+            document.getElementById('t_superadmin_user').value = 'admin';
+            gerarNovaSenhaForte();
+            document.getElementById('t_superadmin_password').required = true;
+            document.getElementById('t_superadmin_password').type = 'password';
+            document.getElementById('btnEyeSenha').innerText = '👁️';
+            document.getElementById('t_ambiente').value = 'base';
+            sugerirPortaPorAmbiente();
+            // Por padrão, todos os módulos vêm habilitados para novo tenant
+            selecionarTodosModulos(true);
+            {% if projeto_selecionado %}
+            document.getElementById('t_projeto_id').value = '{{ projeto_selecionado.id }}';
+            {% endif %}
+            document.getElementById('modalTenant').style.display = 'flex';
+        }
+
+        function filtrarPorProjeto(pId) {
+            if (pId) {
+                window.location.href = '/instancias?projeto_id=' + pId;
+            } else {
+                window.location.href = '/instancias';
+            }
+        }
+
+        function sugerirPortaPorAmbiente() {
+            const amb = document.getElementById('t_ambiente').value;
+            const portaInp = document.getElementById('t_porta');
+            if (!document.getElementById('t_id').value) {
+                if (amb === 'base') portaInp.placeholder = 'Automático (ex: 5010)';
+                else if (amb === 'producao') portaInp.placeholder = 'Automático (ex: 6010)';
+                else portaInp.placeholder = 'Automático (ex: 7010)';
+            }
+        }
+
+        function atualizarLicencasDoCliente() {
+            const sel = document.getElementById('t_cliente');
+            const opt = sel.options[sel.selectedIndex];
+            if (opt && opt.dataset && opt.dataset.licencas) {
+                document.getElementById('t_max_licencas').value = opt.dataset.licencas;
+            }
+        }
+
+        function editarTenant(t) {
+            document.getElementById('modalTenantTitle').innerText = 'Editar Instância (Tenant)';
+            document.getElementById('t_id').value = t.id;
+            document.getElementById('t_cliente').value = t.cliente_id || '';
+            document.getElementById('t_tenant_id').value = t.tenant_id;
+            document.getElementById('t_tenant_id').readOnly = false;
+            document.getElementById('t_nome_empresa').value = t.nome_empresa;
+            document.getElementById('t_ambiente').value = t.ambiente || 'teste';
+            document.getElementById('t_porta').value = t.porta || '';
+            document.getElementById('t_ip_externo').value = t.ip_externo || '';
+            document.getElementById('t_sankhya_url').value = t.sankhya_url;
+            document.getElementById('t_sankhya_appkey').value = t.sankhya_appkey || '';
+            document.getElementById('t_projeto_id').value = t.projeto_id || '';
+            document.getElementById('t_versao_atual').value = t.versao_atual || 'v1.0.5';
+
+            // Sincroniza licenças contratadas do cadastro do cliente (último histórico de contrato)
+            let licencas = t.cliente_licencas_historico;
+            if (licencas === undefined || licencas === null) {
+                if (t.cliente_id) {
+                    const cliOpt = document.querySelector(`#t_cliente option[value="${t.cliente_id}"]`);
+                    if (cliOpt && cliOpt.dataset && cliOpt.dataset.licencas) {
+                        licencas = parseInt(cliOpt.dataset.licencas);
+                    }
+                }
+            }
+            document.getElementById('t_max_licencas').value = (licencas !== undefined && licencas !== null) ? licencas : (t.max_licencas || 5);
+            document.getElementById('t_max_licencas').readOnly = true;
+            document.getElementById('t_validade').value = t.validade_licenca || '';
+            document.getElementById('t_status').value = t.status || 'ativo';
+            document.getElementById('t_superadmin_user').value = t.superadmin_user || 'admin';
+            document.getElementById('t_superadmin_password').value = t.superadmin_password || '';
+            document.getElementById('t_superadmin_password').required = false;
+            document.getElementById('t_superadmin_password').type = 'password';
+            document.getElementById('btnEyeSenha').innerText = '👁️';
+
+            // Carrega e marca os módulos contratados pelo tenant
+            let mods = t.modulos_lista;
+            if (!mods && t.modulos_habilitados) {
+                if (Array.isArray(t.modulos_habilitados)) {
+                    mods = t.modulos_habilitados;
+                } else if (typeof t.modulos_habilitados === 'string') {
+                    try {
+                        mods = JSON.parse(t.modulos_habilitados);
+                    } catch(e) {
+                        mods = null;
+                    }
+                }
+            }
+
+            if (Array.isArray(mods)) {
+                document.querySelectorAll('.chk-modulo').forEach(chk => {
+                    chk.checked = mods.includes(chk.value);
+                });
+            } else {
+                // Se ainda não tiver configuração gravada, habilita todos por padrão
+                selecionarTodosModulos(true);
+            }
+
+            document.getElementById('modalTenant').style.display = 'flex';
+        }
+
+        function alternarVisibilidadeSenha() {
+            const input = document.getElementById('t_superadmin_password');
+            const btn = document.getElementById('btnEyeSenha');
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.innerText = '🙈';
+            } else {
+                input.type = 'password';
+                btn.innerText = '👁️';
+            }
+        }
+
+        function alternarVisibilidadeSenhaTabela(tenantId) {
+            const codeEl = document.getElementById('pass_view_' + tenantId);
+            const btnEl = document.getElementById('btn_eye_' + tenantId);
+            if (!codeEl) return;
+
+            const realPass = codeEl.getAttribute('data-real-pass') || '';
+            const isMasked = codeEl.innerText === '••••••••';
+
+            if (isMasked) {
+                codeEl.innerText = realPass || '---';
+                if (btnEl) btnEl.innerText = '🙈';
+            } else {
+                codeEl.innerText = '••••••••';
+                if (btnEl) btnEl.innerText = '👁️';
+            }
+        }
+
+        function gerarNovaSenhaForte() {
+            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*-_";
+            let pass = "";
+            for (let i = 0; i < 14; i++) {
+                pass += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            const input = document.getElementById('t_superadmin_password');
+            if (input) {
+                input.value = pass;
+                input.type = 'text';
+            }
+            const btn = document.getElementById('btnEyeSenha');
+            if (btn) btn.innerText = '👁️';
+        }
+
+        function fecharModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function filtrarTabela() {
+            const input = document.getElementById("inputBusca").value.toUpperCase();
+            const amb = document.getElementById("filtroAmbiente").value;
+            const trs = document.querySelectorAll("#tabelaTenants tbody tr");
+
+            trs.forEach(tr => {
+                const text = tr.innerText.toUpperCase();
+                const trAmb = tr.getAttribute("data-ambiente");
+                const matchText = text.indexOf(input) > -1;
+                const matchAmb = !amb || trAmb === amb;
+
+                tr.style.display = (matchText && matchAmb) ? "" : "none";
+            });
+        }
+
+        function ordenarTabela(n) {
+            const table = document.getElementById("tabelaTenants");
+            let rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            switching = true;
+            dir = "asc";
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+                    if (dir == "asc") {
+                        if (x.innerText.toLowerCase() > y.innerText.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else if (dir == "desc") {
+                        if (x.innerText.toLowerCase() < y.innerText.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount++;
+                } else {
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+# Ambientes virtuais
+.venv/
+venv/
+ENV/
+
+# Arquivos de ambiente e segredos (NUNCA ENVIAR PARA O GIT)
+.env
+*.env
+.env.local
+
+# Bancos de dados locais SQLite
+*.db
+*.sqlite3
+admin.db
+admin_panel/admin.db
+
+# Caches do Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Arquivos de log e temporários
+*.log
+scratch/
+_pontos_restauracao/
+admin_data/
+
+# Sistema operacional
+.DS_Store
+*.DS_Store
+Thumbs.db
+Desktop.ini

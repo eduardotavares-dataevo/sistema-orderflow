@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OrderFlow</title>
+  <script>
+    (function () {
+      const savedTheme = localStorage.getItem("app_theme") || "light";
+      document.documentElement.setAttribute("data-theme", savedTheme);
+      if (localStorage.getItem("app_sidebar_collapsed") === "true") {
+        document.documentElement.classList.add("sidebar-collapsed");
+      }
+      function checkMobile() {
+        const isMobile = window.innerWidth <= 768;
+        document.documentElement.classList.toggle("is-mobile", isMobile);
+        if (document.body) document.body.classList.toggle("is-mobile", isMobile);
+      }
+      checkMobile();
+      window.addEventListener("resize", checkMobile);
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="{{ url_for('static', filename='js/qrcode.min.js') }}"></script>
+</head>
+
+<body>
+  <script>
+    if (document.documentElement.classList.contains("sidebar-collapsed")) {
+      document.body.classList.add("sidebar-collapsed");
+    }
+    if (window.innerWidth <= 768) {
+      document.body.classList.add("is-mobile");
+    }
+  </script>
+
+  <!-- MENU LATERAL À ESQUERDA (SIDEBAR SANKHYA OM) -->
+  <aside class="app-sidebar">
+    <div class="sidebar-brand">
+      <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; width: 100%;">
+        <span class="sidebar-logo-icon" onclick="alternarSidebarCollapse()" title="Retrair / Expandir Menu Lateral">⚡</span>
+        <div class="sidebar-brand-text" style="display: flex; flex-direction: column;">
+          <span style="color: #00A859; font-weight: 800; font-size: 15px; letter-spacing: -0.5px; line-height: 1.1;">OrderFlow</span>
+          <span style="color: #64748b; font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">Central de Pedidos</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- LISTA EXATA DE MENUS EM ORDEM (FILTRADOS POR MÓDULOS CONTRATADOS DO TENANT) -->
+    <ul class="sidebar-menu">
+      {% if modulo_habilitado('inicio') %}
+      <li>
+        <a href="/" class="{% if request.path == '/' %}active{% endif %}" title="Início">
+          <i class="fa-solid fa-house" style="width: 16px; text-align: center;"></i>
+          <span>Início</span>
+        </a>
+      </li>
+      {% endif %}
+
+      {% if modulo_habilitado('portal_vendas') %}
+      <li>
+        <a href="/portal-vendas"
+          class="{% if request.path.startswith('/portal-vendas') or request.path.startswith('/central-pedidos') or request.path.startswith('/pedidos') or request.path.startswith('/novo-pedido') or request.path.startswith('/produtos') %}active{% endif %}" title="Central de Pedidos">
+          <i class="fa-solid fa-table-list" style="width: 16px; text-align: center;"></i>
+          <span>Central de Pedidos</span>
+        </a>
+      </li>
+      {% endif %}
+
+      {% if modulo_habilitado('consulta_produtos') %}
+      <li>
+        <a href="/consulta-produtos" class="{% if request.path == '/consulta-produtos' %}active{% endif %}" title="Consulta de Produtos">
+          <i class="fa-solid fa-magnifying-glass" style="width: 16px; text-align: center;"></i>
+          <span>Consulta de Produtos</span>
+        </a>
+      </li>
+      {% endif %}
+
+      {% if modulo_habilitado('promocoes') %}
+      <li>
+        <a href="/promocoes" class="{% if request.path == '/promocoes' %}active{% endif %}" title="Promoções">
+          <i class="fa-solid fa-tags" style="width: 16px; text-align: center;"></i>
+          <span>Promoções</span>
+        </a>
+      </li>
+      {% endif %}
+
+      {% if modulo_habilitado('bi') %}
+      <li>
+        <a href="/bi" class="{% if request.path == '/bi' %}active{% endif %}" title="BI">
+          <i class="fa-solid fa-chart-pie" style="width: 16px; text-align: center;"></i>
+          <span>BI</span>
+        </a>
+      </li>
+      {% endif %}
+
+      <!-- MENU CONFIGURAÇÕES (ACESSO PARA TODOS OS USUÁRIOS) -->
+      {% if modulo_habilitado('configuracoes') %}
+      <li>
+        <a href="/configuracoes"
+          class="{% if request.path == '/configuracoes' or request.path == '/contato' %}active{% endif %}" title="Configurações">
+          <i class="fa-solid fa-gear" style="width: 16px; text-align: center;"></i>
+          <span>Configurações</span>
+        </a>
+      </li>
+      {% endif %}
+
+      <!-- MENUS EXCLUSIVOS PARA USUÁRIO ADMINISTRADOR / SUPER ADMIN -->
+      {% if (session.get('usuario') and (session['usuario'].get('is_adm') or session['usuario'].get('is_superadmin'))) and modulo_habilitado('acessos') %}
+      <li>
+        <a href="/acessos" class="{% if request.path == '/acessos' or request.path == '/sobre' %}active{% endif %}" title="Acessos">
+          <i class="fa-solid fa-shield-halved" style="width: 16px; text-align: center;"></i>
+          <span>Acessos</span>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+
+    <!-- RODAPÉ DO MENU LATERAL (USUÁRIO, SAIR, ADM, CONECTADO E VERSIONAMENTO) -->
+    <div class="sidebar-footer">
+
+      <!-- USUÁRIO LOGADO -->
+      <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #1e293b;">
+        <span
+          style="background: #0284c7; color: #ffffff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; flex-shrink: 0;" title="{{ session['usuario']['nome'] if session.get('usuario') and session['usuario'].get('nome') else 'Usuário' }}">
+          {{ (session['usuario']['nome'][:2]).upper() if session.get('usuario') and session['usuario'].get('nome') else 'US' }}
+        </span>
+        <div class="sidebar-user-details" style="display: flex; flex-direction: column; overflow: hidden;">
+          <span class="sidebar-user-name"
+            style="font-size: 11px; font-weight: 700; color: #f8fafc !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {{ session['usuario']['nome'] if session.get('usuario') and session['usuario'].get('nome') else 'Usuário' }}
+          </span>
+          <span class="sidebar-user-code" style="font-size: 9.5px; color: #94a3b8 !important;">
+            Cód. {{ session['usuario']['codusu'] if session.get('usuario') and session['usuario'].get('codusu') else '-' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- BOTÃO SAIR ACIMA DO ADM COM CONFIRMAÇÃO DE SAÍDA (MODAL SANKHYA) -->
+      <div style="margin-bottom: 8px;">
+        <a href="/logout" onclick="event.preventDefault(); abrirModalConfirmarSair();" title="Sair da Sessão"
+          style="color: #f87171; font-size: 10.5px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; padding: 4px 8px; background: #1e293b; border-radius: 3px; transition: background 0.15s ease; cursor: pointer;">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span>Sair</span>
+        </a>
+      </div>
+
+      <!-- BADGE ADM (SE USUÁRIO POSSUIR AD_ADMCENTRALPED = 'S' OU FOR SUPERADMIN) -->
+      {% if session.get('usuario') and (session['usuario'].get('is_adm') or session['usuario'].get('is_superadmin')) %}
+      <div style="margin-bottom: 6px;">
+        <span class="sidebar-footer-text"
+          style="background: #00A859; color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 2px 7px; border-radius: 2px; letter-spacing: 0.5px; display: inline-block;">
+          {% if session['usuario'].get('is_superadmin') %}SUPER ADMIN{% else %}ADM{% endif %}
+        </span>
+      </div>
+      {% endif %}
+
+      <!-- STATUS AMBIENTE (TESTE / PRODUÇÃO) -->
+      <div class="sidebar-footer-text" style="color: {% if versao_ambiente == 'producao' %}#10b981{% else %}#f59e0b{% endif %}; font-weight: 700; display: flex; align-items: center; gap: 5px; font-size: 10px;">
+        <span style="display: inline-block; width: 6px; height: 6px; background: {% if versao_ambiente == 'producao' %}#10b981{% else %}#f59e0b{% endif %}; border-radius: 50%; box-shadow: 0 0 4px {% if versao_ambiente == 'producao' %}#10b981{% else %}#f59e0b{% endif %};"></span>
+        <span>CONECTADO ({{ versao_ambiente|upper }})</span>
+      </div>
+
+      <!-- CONTROLE DE VERSÃO INSTALADA -->
+      <div class="sidebar-footer-text" style="margin-top: 4px; display: flex; align-items: center; gap: 5px; font-size: 9.5px; font-weight: 500;">
+        <span style="color: #64748b;">Versão</span>
+        <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 1px 5px; border-radius: 3px; font-weight: 700; font-size: 9.5px;" title="Branch: {{ versao_branch }} | {{ versao_titulo or 'Versão do Sistema' }}">
+          {{ versao_atual }}
+        </span>
+        {% if versao_branch and versao_branch != 'main' %}
+        <span style="color: #64748b; font-size: 8.5px;" title="Branch: {{ versao_branch }}">({{ versao_branch }})</span>
+        {% endif %}
+      </div>
+    </div>
+  </aside>
+
+  <!-- ÁREA PRINCIPAL DE CONTEÚDO (EDGE-TO-EDGE) -->
+  <div class="app-main-content">
+
+    <!-- TOPBAR SUPERIOR SLIM (SEM O USUÁRIO LOGADO) -->
+    {% set is_local = 'Base' in (tenant_nome_empresa or '') or 'base' in (tenant_nome_empresa or '') or 'Localhost' in (tenant_nome_empresa or '') or 'localhost' in (tenant_nome_empresa or '') or versao_ambiente in ('base', 'local') %}
+    <header class="sankhya-topbar{% if is_local %} topbar-local-env{% endif %}">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        {% if is_local %}
+        <span class="topbar-local-badge">
+          <i class="fa-solid fa-laptop-code" style="font-size: 9px;"></i>
+          BASE / DEV
+        </span>
+        {% endif %}
+        <span class="sankhya-topbar-title" style="font-weight: 700; font-size: 12px;">
+          {% block titulo_pagina %}Central de Gestão{% endblock %}
+        </span>
+        <span class="sankhya-topbar-sep" style="color: #cbd5e1;">|</span>
+        <span class="sankhya-topbar-sub" style="font-size: 11px;">{{ tenant_nome_empresa or 'Auto Giro Distribuidora de Peças' }}</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button type="button" id="btn-topbar-theme-toggle" onclick="alternarTemaGlobalRapido()" title="Alternar Modo Claro / Escuro" style="border-radius: 6px; padding: 2px 10px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 26px; transition: all 0.2s ease;">
+          <span id="topbar-theme-icon">☀️</span>
+          <span id="topbar-theme-label" style="font-size: 10.5px; font-weight: 600;">Claro</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ÁREA DE CONTEÚDO PRINCIPAL -->
+    <main class="container" style="padding: 6px 10px 10px 10px !important;">
+      {% block conteudo %}
+      {% endblock %}
+    </main>
+
+  </div>
+
+  <!-- MODAL POPUP DE CONFIRMAÇÃO DE SAÍDA (LOGOUT SANKHYA OM) -->
+  <div id="modal-confirmar-sair" class="snk-modal-backdrop" style="display: none; z-index: 9999999;" onclick="if (event.target === this) fecharModalConfirmarSair();">
+    <div class="snk-modal-dialog snk-confirm-dialog" style="max-width: 440px;">
+      
+      <!-- Cabeçalho do Modal -->
+      <div class="snk-confirm-header" style="background: #0284c7 !important; border-bottom-color: #0369a1 !important;">
+        <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; color: #ffffff;">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span>Confirmar Saída</span>
+        </div>
+        <button type="button" onclick="fecharModalConfirmarSair()" class="snk-lib-close-btn" style="color: #ffffff;" title="Cancelar (Esc)">✕</button>
+      </div>
+
+      <!-- Corpo do Modal -->
+      <div class="snk-confirm-body">
+        <div class="snk-confirm-icon-box" style="background: rgba(2, 132, 199, 0.12) !important; color: #0284c7 !important; border-color: rgba(2, 132, 199, 0.3) !important;">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </div>
+        <div style="flex: 1;">
+          <div class="snk-confirm-title">
+            Deseja realmente sair do sistema?
+          </div>
+          <div class="snk-confirm-text">
+            Sua sessão atual de trabalho no Sankhya será encerrada com segurança.
+          </div>
+        </div>
+      </div>
+
+      <!-- Rodapé -->
+      <div class="snk-confirm-footer">
+        <button type="button" class="snk-tool-btn-large" style="padding: 0 14px; height: 28px; font-size: 11px;" onclick="fecharModalConfirmarSair()">Cancelar</button>
+        <a href="/logout" id="btn-confirmar-sair-sim" class="snk-tool-btn-large" style="padding: 0 14px; height: 28px; font-size: 11px; background: #0284c7 !important; color: #ffffff !important; border-color: #0369a1 !important; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-right-from-bracket"></i> Sim, Sair</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL POPUP GLOBAL DE AVISO / ESTOQUE / ALERTA (PADRÃO SANKHYA OM) -->
+  <div id="modal-sankhya-alerta-global" class="snk-modal-backdrop" style="display: none; z-index: 99999999;" onclick="if (event.target === this) fecharModalAlertaGlobal();">
+    <div class="snk-modal-dialog" style="max-width: 440px;">
+      <div id="modal-global-header" class="snk-modal-header-danger">
+        <span id="modal-global-header-title">Aviso</span>
+      </div>
+      <div class="snk-modal-body" style="padding: 22px 20px 18px 20px;">
+        <div id="modal-global-icon" class="snk-modal-icon-x">
+          ✕
+        </div>
+        <div id="modal-global-title" class="snk-modal-text-title" style="margin-bottom: 8px;">
+          Estoque insuficiente.
+        </div>
+        <div id="modal-global-message" class="snk-modal-text-details" style="font-size: 12px; line-height: 1.5; margin-bottom: 4px; word-break: break-word;">
+          <!-- Mensagem dinâmica -->
+        </div>
+      </div>
+      <div class="snk-modal-footer" style="justify-content: flex-end; padding: 8px 16px;">
+        <button type="button" id="btn-modal-global-ok" class="snk-modal-btn-ok" onclick="fecharModalAlertaGlobal()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT GLOBAL DE GERENCIAMENTO DO TEMA E MODAIS -->
+  <script>
+    function abrirModalConfirmarSair() {
+      const modal = document.getElementById("modal-confirmar-sair");
+      if (modal) modal.style.display = "flex";
+    }
+
+    function fecharModalConfirmarSair() {
+      const modal = document.getElementById("modal-confirmar-sair");
+      if (modal) modal.style.display = "none";
+    }
+
+    function fecharModalAlertaGlobal() {
+      const modal = document.getElementById("modal-sankhya-alerta-global");
+      if (modal) modal.style.display = "none";
+    }
+
+    function mostrarAlerta(mensagem, titulo = "Aviso", tipo = "error") {
+      const modal = document.getElementById("modal-sankhya-alerta-global");
+      if (!modal) {
+        if (window.nativeAlert) {
+          window.nativeAlert(mensagem);
+        }
+        return;
+      }
+
+      const headerEl = document.getElementById("modal-global-header");
+      const headerTitleEl = document.getElementById("modal-global-header-title");
+      const iconEl = document.getElementById("modal-global-icon");
+      const titleEl = document.getElementById("modal-global-title");
+      const msgEl = document.getElementById("modal-global-message");
+      const btnOk = document.getElementById("btn-modal-global-ok");
+
+      if (headerTitleEl) headerTitleEl.innerText = titulo || "Aviso";
+      if (msgEl) msgEl.innerText = mensagem || "";
+
+      const msgLower = (typeof mensagem === "string") ? mensagem.toLowerCase() : "";
+      const isEstoque = msgLower.includes("estoque");
+      const isWarning = tipo === "warning" || tipo === "aviso";
+      const isSuccess = tipo === "success" || tipo === "sucesso";
+
+      if (headerEl) {
+        if (isWarning) {
+          headerEl.className = "snk-modal-header-warning";
+        } else {
+          headerEl.className = "snk-modal-header-danger";
+        }
+      }
+
+      if (iconEl) {
+        if (isWarning) {
+          iconEl.className = "snk-modal-icon-warn";
+          iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #ca8a04; font-size: 36px;"></i>';
+          iconEl.style.background = "transparent";
+          iconEl.style.boxShadow = "none";
+        } else if (isSuccess) {
+          iconEl.className = "snk-modal-icon-x";
+          iconEl.innerHTML = "✓";
+          iconEl.style.background = "#16a34a";
+          iconEl.style.boxShadow = "0 4px 6px -1px rgba(22, 163, 74, 0.4)";
+        } else {
+          iconEl.className = "snk-modal-icon-x";
+          iconEl.innerHTML = "✕";
+          iconEl.style.background = "#dc2626";
+          iconEl.style.boxShadow = "0 4px 6px -1px rgba(220, 38, 38, 0.4)";
+        }
+      }
+
+      if (titleEl) {
+        if (isEstoque) {
+          titleEl.innerText = "Estoque insuficiente.";
+        } else if (isWarning) {
+          titleEl.innerText = (titulo && titulo !== "Aviso") ? titulo : "Atenção";
+        } else if (isSuccess) {
+          titleEl.innerText = (titulo && titulo !== "Aviso") ? titulo : "Sucesso";
+        } else {
+          titleEl.innerText = titulo || "Aviso";
+        }
+      }
+
+      modal.style.display = "flex";
+      if (btnOk) {
+        setTimeout(() => { btnOk.focus(); }, 50);
+      }
+    }
+
+    window.mostrarAlerta = mostrarAlerta;
+    window.fecharModalAlertaGlobal = fecharModalAlertaGlobal;
+
+    // Redireciona alert nativo para o modal do sistema
+    if (!window.nativeAlert) {
+      window.nativeAlert = window.alert;
+    }
+    window.alert = function (msg) {
+      mostrarAlerta(msg);
+    };
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        fecharModalConfirmarSair();
+        fecharModalAlertaGlobal();
+      }
+      if (e.key === "Enter") {
+        const modalAlerta = document.getElementById("modal-sankhya-alerta-global");
+        if (modalAlerta && modalAlerta.style.display === "flex") {
+          e.preventDefault();
+          fecharModalAlertaGlobal();
+        }
+      }
+    });
+
+    function sincronizarIndicadorTemaTopbar() {
+      const temaAtual = document.documentElement.getAttribute("data-theme") || "light";
+      const iconEl = document.getElementById("topbar-theme-icon");
+      const labelEl = document.getElementById("topbar-theme-label");
+      const btnEl = document.getElementById("btn-topbar-theme-toggle");
+      if (iconEl && labelEl) {
+        if (temaAtual === "dark") {
+          iconEl.textContent = "🌙";
+          labelEl.textContent = "Escuro";
+          if (btnEl) {
+            btnEl.style.borderColor = "#374151";
+            btnEl.style.color = "#ffffff";
+            btnEl.style.backgroundColor = "#1f2937";
+          }
+        } else {
+          iconEl.textContent = "☀️";
+          labelEl.textContent = "Claro";
+          if (btnEl) {
+            btnEl.style.borderColor = "#cbd5e1";
+            btnEl.style.color = "#0f172a";
+            btnEl.style.backgroundColor = "#ffffff";
+          }
+        }
+      }
+    }
+
+    function aplicarTemaGlobal(tema) {
+      document.documentElement.setAttribute("data-theme", tema);
+      try {
+        localStorage.setItem("app_theme", tema);
+      } catch (e) {}
+      sincronizarIndicadorTemaTopbar();
+      window.dispatchEvent(new CustomEvent("temaAlterado", { detail: { tema } }));
+    }
+
+    function alternarTemaGlobalRapido() {
+      const temaAtual = document.documentElement.getAttribute("data-theme") || "light";
+      const novoTema = temaAtual === "dark" ? "light" : "dark";
+      aplicarTemaGlobal(novoTema);
+    }
+
+    function alternarSidebarCollapse() {
+      document.body.classList.add("sidebar-animating");
+      const isCollapsed = document.body.classList.toggle("sidebar-collapsed");
+      document.documentElement.classList.toggle("sidebar-collapsed", isCollapsed);
+      try {
+        localStorage.setItem("app_sidebar_collapsed", isCollapsed ? "true" : "false");
+      } catch (e) {}
+      setTimeout(() => {
+        document.body.classList.remove("sidebar-animating");
+      }, 350);
+    }
+
+    function restaurarEstadoSidebar() {
+      try {
+        if (localStorage.getItem("app_sidebar_collapsed") === "true") {
+          document.documentElement.classList.add("sidebar-collapsed");
+          document.body.classList.add("sidebar-collapsed");
+        }
+      } catch (e) {}
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      sincronizarIndicadorTemaTopbar();
+      restaurarEstadoSidebar();
+
+      // Evita recarregar página desnecessariamente ao clicar no item já ativo
+      document.querySelectorAll(".sidebar-menu a").forEach(a => {
+        a.addEventListener("click", function (e) {
+          if (this.classList.contains("active") && this.getAttribute("href") === window.location.pathname) {
+            e.preventDefault();
+          }
+        });
+      });
+    });
+
+    // SELEÇÃO GLOBAL DE LINHAS EM TODAS AS TABELAS DO SISTEMA
+    document.addEventListener("click", function (e) {
+      const row = e.target.closest("table tbody tr");
+      if (!row || row.id === "linha-tabela-itens-vazia" || row.id === "linha-tabela-pedidos-vazia" || row.classList.contains("snk-table-empty")) return;
+      
+      const tbody = row.closest("tbody");
+      if (tbody) {
+        tbody.querySelectorAll("tr").forEach(r => {
+          r.classList.remove("row-selected", "produto-row-selected");
+        });
+        row.classList.add("row-selected", "produto-row-selected");
+      }
+    });
+
+    // Sincronização e Heartbeat da Sessão com o Painel Admin Central (a cada 30 segundos)
+    {% if session.get('usuario') %}
+    setInterval(function () {
+      fetch('/api/heartbeat', { method: 'POST' })
+        .then(r => {
+          if (r.status === 401) {
+            window.location.href = '/login?msg=' + encodeURIComponent('Sua sessão foi encerrada pela administração.');
+          }
+        })
+        .catch(() => {});
+    }, 30000);
+    {% endif %}
+  </script>
+
+  <!-- BOTTOM NAVIGATION BAR — MOBILE (≤480px, controlado via CSS) -->
+  <nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="Navegação Mobile">
+    {% if modulo_habilitado('inicio') %}
+    <a href="/" id="mobile-nav-inicio" class="mobile-nav-item" title="Início">
+      <i class="fa-solid fa-house"></i>
+      <span>Início</span>
+    </a>
+    {% endif %}
+    {% if modulo_habilitado('portal_vendas') %}
+    <a href="/portal-vendas" id="mobile-nav-pedidos" class="mobile-nav-item" title="Pedidos">
+      <i class="fa-solid fa-table-list"></i>
+      <span>Pedidos</span>
+    </a>
+    {% endif %}
+    {% if modulo_habilitado('consulta_produtos') %}
+    <a href="/consulta-produtos" id="mobile-nav-produtos" class="mobile-nav-item" title="Produtos">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <span>Produtos</span>
+    </a>
+    {% endif %}
+    {% if modulo_habilitado('promocoes') %}
+    <a href="/promocoes" id="mobile-nav-promocoes" class="mobile-nav-item" title="Promoções">
+      <i class="fa-solid fa-tags"></i>
+      <span>Promoções</span>
+    </a>
+    {% endif %}
+    {% if modulo_habilitado('bi') %}
+    <a href="/bi" id="mobile-nav-bi" class="mobile-nav-item" title="BI">
+      <i class="fa-solid fa-chart-pie"></i>
+      <span>BI</span>
+    </a>
+    {% endif %}
+    {% if modulo_habilitado('configuracoes') %}
+    <a href="/configuracoes" id="mobile-nav-config" class="mobile-nav-item" title="Config.">
+      <i class="fa-solid fa-gear"></i>
+      <span>Config.</span>
+    </a>
+    {% endif %}
+    {% if modulo_habilitado('acessos') and session.get('usuario') and session['usuario'].get('is_adm') %}
+    <a href="/acessos" id="mobile-nav-acessos" class="mobile-nav-item" title="Acessos">
+      <i class="fa-solid fa-shield-halved"></i>
+      <span>Acessos</span>
+    </a>
+    {% endif %}
+  </nav>
+
+  <script>
+    // Destaca item ativo no bottom nav mobile
+    (function () {
+      const path = window.location.pathname;
+      const mapa = [
+        { id: 'mobile-nav-inicio',    match: p => p === '/' },
+        { id: 'mobile-nav-pedidos',   match: p => p.startsWith('/portal-vendas') || p.startsWith('/central-pedidos') || p.startsWith('/pedidos') || p.startsWith('/novo-pedido') },
+        { id: 'mobile-nav-produtos',  match: p => p.startsWith('/consulta-produtos') },
+        { id: 'mobile-nav-promocoes', match: p => p.startsWith('/promocoes') },
+        { id: 'mobile-nav-bi',        match: p => p.startsWith('/bi') },
+        { id: 'mobile-nav-config',    match: p => p.startsWith('/configuracoes') || p.startsWith('/contato') },
+        { id: 'mobile-nav-acessos',   match: p => p.startsWith('/acessos') || p.startsWith('/sobre') },
+      ];
+      mapa.forEach(function (item) {
+        const el = document.getElementById(item.id);
+        if (el && item.match(path)) el.classList.add('active');
+      });
+    })();
+  </script>
+
+</body>
+
+</html>

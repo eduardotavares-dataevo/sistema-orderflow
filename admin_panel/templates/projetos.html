@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Projetos & Branches — OrderFlow Admin</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-body: #0b0f19;
+            --bg-sidebar: #111827;
+            --bg-card: #1f2937;
+            --bg-card-hover: #374151;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --border-color: #374151;
+            --sidebar-width: 250px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 1.5rem 1.25rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .sidebar-brand span { color: var(--text-main); }
+
+        .sidebar-menu {
+            padding: 1.25rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+            flex: 1;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9375rem;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-link:hover {
+            background-color: var(--bg-card-hover);
+            color: var(--text-main);
+        }
+
+        .sidebar-link.active {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .sidebar-submenu {
+            margin-left: 1.25rem;
+            border-left: 2px solid rgba(255, 255, 255, 0.08);
+            padding-left: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            margin-top: 0.25rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .sidebar-sublink {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.5rem 0.75rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-sublink:hover {
+            background-color: var(--bg-card-hover);
+            color: var(--text-main);
+        }
+
+        .sidebar-sublink.active {
+            background-color: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            font-weight: 600;
+        }
+
+        .sidebar-footer {
+            padding: 1.25rem 1rem;
+            border-top: 1px solid var(--border-color);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name { font-size: 0.875rem; font-weight: 600; color: var(--text-main); }
+        .user-role { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+
+        .btn-logout {
+            background: none;
+            border: none;
+            color: var(--accent-red);
+            cursor: pointer;
+            font-size: 0.875rem;
+            padding: 0.375rem;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+        .btn-logout:hover { background-color: rgba(239, 68, 68, 0.1); }
+
+        /* Main Content */
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 2rem;
+            max-width: 1400px;
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .page-title h1 { font-size: 1.75rem; font-weight: 700; color: var(--text-main); }
+        .page-title p { font-size: 0.875rem; color: var(--text-muted); margin-top: 0.25rem; }
+
+        .header-actions { display: flex; gap: 0.75rem; }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background-color 0.2s ease;
+        }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+
+        .btn-secondary {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+        }
+        .btn-secondary:hover { background-color: var(--bg-card-hover); border-color: var(--text-muted); }
+
+        .btn-duplicate {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+            color: white;
+            border: none;
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: opacity 0.2s ease;
+        }
+        .btn-duplicate:hover { opacity: 0.9; }
+
+        /* Metric Cards */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .metric-value { font-size: 1.875rem; font-weight: 700; color: var(--text-main); }
+        .metric-icon { font-size: 1.25rem; padding: 0.5rem; border-radius: 8px; background-color: rgba(255, 255, 255, 0.05); }
+
+        /* Table Card */
+        .table-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table-header-box {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-title { font-size: 1.125rem; font-weight: 600; }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th {
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 0.875rem 1.25rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.875rem;
+            vertical-align: middle;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: rgba(255, 255, 255, 0.02); }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-active { background-color: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-archived { background-color: rgba(156, 163, 175, 0.15); color: var(--text-muted); border: 1px solid rgba(156, 163, 175, 0.3); }
+        .badge-branch { background-color: rgba(139, 92, 246, 0.15); color: var(--accent-purple); border: 1px solid rgba(139, 92, 246, 0.3); font-family: monospace; }
+        .badge-client { background-color: rgba(59, 130, 246, 0.15); color: var(--primary); border: 1px solid rgba(59, 130, 246, 0.3); }
+
+        .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.75rem; border-radius: 6px; }
+        .btn-danger { background-color: rgba(239, 68, 68, 0.15); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.3); cursor: pointer; }
+        .btn-danger:hover { background-color: var(--accent-red); color: white; }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            width: 100%;
+            max-width: 620px;
+            padding: 1.75rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: 0.8125rem; font-weight: 600; margin-bottom: 0.375rem; color: var(--text-muted); }
+        .form-control {
+            width: 100%;
+            background-color: var(--bg-body);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.625rem 0.875rem;
+            color: var(--text-main);
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-control:focus { border-color: var(--primary); }
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+        .modal-footer {
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        /* Toast Container */
+        .toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--primary);
+            color: var(--text-main);
+            padding: 0.875rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div>
+            <div class="sidebar-brand">
+                ⚡ <span>OrderFlow</span>
+            </div>
+            <nav class="sidebar-menu">
+                {% if tem_permissao('projetos', 'ver') %}
+                <div class="sidebar-nav-group">
+                    <a href="/projetos" class="sidebar-link active">
+                        <span>📁</span> Projetos & Branches
+                    </a>
+                    {% if tem_permissao('tenants', 'ver') %}
+                    <div class="sidebar-submenu">
+                        <a href="/instancias" class="sidebar-sublink">
+                            <span>🖥️</span> Instâncias (Tenants)
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% elif tem_permissao('tenants', 'ver') %}
+                <a href="/instancias" class="sidebar-link">
+                    <span>🖥️</span> Instâncias (Tenants)
+                </a>
+                {% endif %}
+                {% if tem_permissao('clientes', 'ver') %}
+                <a href="/clientes" class="sidebar-link">
+                    <span>🏢</span> Clientes (Empresas)
+                </a>
+                {% endif %}
+                {% if tem_permissao('versoes', 'ver') %}
+                <a href="/versoes" class="sidebar-link">
+                    <span>🚀</span> Versões & Releases
+                </a>
+                {% endif %}
+                {% if tem_permissao('usuarios', 'ver') %}
+                <a href="/usuarios" class="sidebar-link">
+                    <span>👥</span> Usuários Admin
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="user-details">
+                    <span class="user-name">{{ session.get('admin_user_nome') }}</span>
+                    <span class="user-role">{{ session.get('admin_perfil')|upper }}</span>
+                </div>
+                <button class="btn-logout" onclick="confirmarSair()">🚪 Sair</button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <div class="top-header">
+            <div class="page-title">
+                <h1>Gestão de Projetos & Branches Git</h1>
+                <p>Organização de repositórios, branches específicas por cliente e controle de duplicidade de escopo.</p>
+            </div>
+            <div class="header-actions">
+                {% if tem_permissao('projetos', 'duplicar') %}
+                <button class="btn-duplicate" onclick="abrirModalDuplicar()">
+                    <i class="fa-solid fa-copy"></i> Duplicar Projeto
+                </button>
+                {% endif %}
+                {% if tem_permissao('projetos', 'editar') %}
+                <button class="btn-primary" onclick="abrirModalNovoProjeto()">
+                    <i class="fa-solid fa-plus"></i> Novo Projeto
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span>Total de Projetos</span>
+                    <span class="metric-icon">📁</span>
+                </div>
+                <div class="metric-value">{{ projetos|length }}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span>Projetos Ativos</span>
+                    <span class="metric-icon">🟢</span>
+                </div>
+                <div class="metric-value">{{ projetos|selectattr('status', 'equalto', 'ativo')|list|length }}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span>Clientes Vinculados</span>
+                    <span class="metric-icon">🏢</span>
+                </div>
+                <div class="metric-value">{{ clientes|length }}</div>
+            </div>
+        </div>
+
+        <!-- Table Card -->
+        <div class="table-card">
+            <div class="table-header-box">
+                <div class="table-title">Catálogo de Projetos & Branches Cadastrados</div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Projeto & Slug</th>
+                        <th>Cliente Vinculado</th>
+                        <th>Branch Git</th>
+                        <th>Instâncias (Tenants)</th>
+                        <th>Releases / Versões</th>
+                        <th>Status</th>
+                        {% if tem_permissao('projetos', 'editar') or tem_permissao('projetos', 'excluir') %}
+                        <th>Ações</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in projetos %}
+                    <tr>
+                        <td>
+                            <a href="/instancias?projeto_id={{ p.id }}" style="color: var(--text-main); font-size: 0.95rem; font-weight: 700; text-decoration: none; display: block;" onmouseover="this.style.color='#38bdf8'" onmouseout="this.style.color='var(--text-main)'" title="Abrir instâncias deste projeto">
+                                {{ p.nome_projeto }} <span style="font-size: 0.8rem; color: #38bdf8;">↗</span>
+                            </a>
+                            <code style="font-size: 0.78rem; color: var(--accent-cyan);">{{ p.codigo_slug }}</code>
+                            {% if p.descricao %}
+                            <small style="display: block; color: var(--text-muted); font-size: 0.75rem; margin-top: 2px;">{{ p.descricao }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if p.cliente_nome %}
+                            <span class="badge badge-client"><i class="fa-solid fa-building"></i> {{ p.cliente_nome }}</span>
+                            {% else %}
+                            <span style="color: var(--text-muted); font-size: 0.8rem;">Geral / Não atribuído</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-branch"><i class="fa-solid fa-code-branch"></i> {{ p.branch_git }}</span>
+                        </td>
+                        <td>
+                            <a href="/instancias?projeto_id={{ p.id }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; font-weight: 700; font-size: 0.82rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(56, 189, 248, 0.25)'" onmouseout="this.style.background='rgba(56, 189, 248, 0.12)'" title="Gerenciar instâncias de {{ p.nome_projeto }}">
+                                <span>🖥️</span> {{ p.total_tenants }} Instância(s) ➔
+                            </a>
+                        </td>
+                        <td>
+                            <span style="font-weight: 700; color: #a855f7;">{{ p.total_versoes }}</span>
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ 'active' if p.status == 'ativo' else 'archived' }}">
+                                {{ p.status|upper }}
+                            </span>
+                        </td>
+                        {% if tem_permissao('projetos', 'editar') or tem_permissao('projetos', 'excluir') %}
+                        <td>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <a href="/instancias?projeto_id={{ p.id }}" class="btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; font-size: 0.8rem; background: #0284c7; border-color: #0369a1;" title="Gerenciar Instâncias deste Projeto">
+                                    <span>🖥️</span> Instâncias
+                                </a>
+                                {% if tem_permissao('projetos', 'editar') %}
+                                <button class="btn-secondary btn-sm" onclick='editarProjeto({{ p|tojson }})'>Editar</button>
+                                {% endif %}
+                                {% if tem_permissao('projetos', 'duplicar') %}
+                                <button class="btn-secondary btn-sm" style="color: var(--accent-purple); border-color: rgba(139, 92, 246, 0.4);" onclick="abrirModalDuplicarComProjeto({{ p.id }}, '{{ p.nome_projeto }}', '{{ p.codigo_slug }}', '{{ p.branch_git }}', '{{ p.cliente_id or '' }}')" title="Duplicar Projeto para Novo Cliente">
+                                    <i class="fa-solid fa-copy"></i> Duplicar
+                                </button>
+                                {% endif %}
+                                {% if tem_permissao('projetos', 'excluir') %}
+                                <button class="btn-danger btn-sm" onclick="confirmarExcluirProjeto({{ p.id }}, '{{ p.nome_projeto }}')">🗑️</button>
+                                {% endif %}
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                            Nenhum projeto cadastrado até o momento.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal Cadastrar / Editar Projeto -->
+    <div class="modal-overlay" id="modalProjeto">
+        <div class="modal">
+            <div class="modal-title" id="modalProjetoTitle">Cadastrar Novo Projeto</div>
+            <form action="/admin/projeto/salvar" method="POST" id="formProjeto">
+                <input type="hidden" name="id" id="p_id">
+
+                <div class="form-group">
+                    <label>Nome do Projeto</label>
+                    <input type="text" name="nome_projeto" id="p_nome" class="form-control" required placeholder="ex: OrderFlow Auto Giro">
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Código Slug (Identificador)</label>
+                        <input type="text" name="codigo_slug" id="p_slug" class="form-control" required placeholder="ex: proj_autogiro">
+                    </div>
+                    <div class="form-group">
+                        <label>Cliente Vinculado</label>
+                        <select name="cliente_id" id="p_cliente_id" class="form-control">
+                            <option value="">-- Selecione o Cliente --</option>
+                            {% for c in clientes %}
+                            <option value="{{ c.id }}">{{ c.nome_fantasia }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Branch Git Principal</label>
+                        <input type="text" name="branch_git" id="p_branch" class="form-control" required value="main" placeholder="ex: main ou branch-autogiro">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="status" id="p_status" class="form-control">
+                            <option value="ativo">🟢 Ativo</option>
+                            <option value="arquivado">⚪ Arquivado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>URL do Repositório (Opcional)</label>
+                    <input type="text" name="repositorio_url" id="p_repo" class="form-control" placeholder="https://github.com/empresa/orderflow">
+                </div>
+
+                <div class="form-group">
+                    <label>Descrição do Projeto</label>
+                    <textarea name="descricao" id="p_desc" class="form-control" rows="3" placeholder="Descreva os objetivos e personalizações deste projeto..."></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalProjeto')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar Projeto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Duplicar Projeto -->
+    <div class="modal-overlay" id="modalDuplicarProjeto">
+        <div class="modal">
+            <div class="modal-title" style="color: var(--accent-purple);">
+                <i class="fa-solid fa-copy"></i> Duplicar Projeto & Criar Nova Branch
+            </div>
+            <form action="/admin/projeto/duplicar" method="POST" id="formDuplicarProjeto">
+                <div class="form-group">
+                    <label>Projeto de Origem (Base)</label>
+                    <select name="origem_id" id="dup_origem_id" class="form-control" required onchange="atualizarDadosOrigem()">
+                        {% for p in projetos %}
+                        <option value="{{ p.id }}" data-nome="{{ p.nome_projeto }}" data-slug="{{ p.codigo_slug }}" data-branch="{{ p.branch_git }}" data-cliente="{{ p.cliente_id or '' }}">{{ p.nome_projeto }} (Branch: {{ p.branch_git }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Novo Nome do Projeto (Cliente Novo)</label>
+                    <input type="text" name="novo_nome" id="dup_novo_nome" class="form-control" required placeholder="ex: OrderFlow Nova Distribuidora">
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Novo Slug (Identificador)</label>
+                        <input type="text" name="novo_slug" id="dup_novo_slug" class="form-control" required placeholder="ex: proj_novadist">
+                    </div>
+                    <div class="form-group">
+                        <label>Cliente da Nova Empresa</label>
+                        <select name="cliente_id" id="dup_cliente_id" class="form-control">
+                            <option value="">-- Selecione o Cliente Destino --</option>
+                            {% for c in clientes %}
+                            <option value="{{ c.id }}">{{ c.nome_fantasia }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Nova Branch Git (para mudanças específicas)</label>
+                    <input type="text" name="nova_branch" id="dup_nova_branch" class="form-control" required placeholder="ex: branch-novadist">
+                </div>
+
+                <div style="background: rgba(139, 92, 246, 0.1); border: 1px dashed rgba(139, 92, 246, 0.4); border-radius: 8px; padding: 1rem; margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">
+                        <input type="checkbox" name="copiar_versoes" value="1" checked style="accent-color: var(--accent-purple);">
+                        Duplicar catálogo de lançamentos e versões históricas
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">
+                        <input type="checkbox" name="criar_instancia_local" value="1" checked style="accent-color: var(--accent-purple);">
+                        Criar ambiente de desenvolvimento local automaticamente (Localhost)
+                    </label>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalDuplicarProjeto')">Cancelar</button>
+                    <button type="submit" class="btn-duplicate">Confirmar & Duplicar Projeto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Confirmar Sair -->
+    <div class="modal-overlay" id="modalConfirmarSair">
+        <div class="modal" style="max-width: 400px; text-align: center;">
+            <div class="modal-title" style="justify-content: center; color: var(--accent-red);">
+                🚪 Confirmar Saída
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                Deseja realmente encerrar sua sessão no OrderFlow Admin?
+            </p>
+            <div style="display: flex; gap: 0.75rem; justify-content: center;">
+                <button class="btn-secondary" onclick="fecharModal('modalConfirmarSair')">Cancelar</button>
+                <a href="/logout" class="btn-primary" style="background-color: var(--accent-red); text-decoration: none;">Sim, Sair</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showToast(msg, tipo = 'sucesso') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.borderLeftColor = tipo === 'sucesso' ? '#10b981' : tipo === 'erro' ? '#ef4444' : '#3b82f6';
+            toast.innerHTML = `<span>${tipo === 'sucesso' ? '✅' : tipo === 'erro' ? '❌' : 'ℹ️'}</span> <div>${msg}</div>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const msg = urlParams.get('msg');
+            const tipo = urlParams.get('tipo') || 'sucesso';
+            if (msg) {
+                showToast(msg, tipo);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        });
+
+        function fecharModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function abrirModalNovoProjeto() {
+            document.getElementById('modalProjetoTitle').innerText = 'Cadastrar Novo Projeto';
+            document.getElementById('formProjeto').reset();
+            document.getElementById('p_id').value = '';
+            document.getElementById('p_branch').value = 'main';
+            document.getElementById('modalProjeto').style.display = 'flex';
+        }
+
+        function editarProjeto(p) {
+            document.getElementById('modalProjetoTitle').innerText = 'Editar Projeto';
+            document.getElementById('p_id').value = p.id;
+            document.getElementById('p_nome').value = p.nome_projeto;
+            document.getElementById('p_slug').value = p.codigo_slug;
+            document.getElementById('p_cliente_id').value = p.cliente_id || '';
+            document.getElementById('p_branch').value = p.branch_git || 'main';
+            document.getElementById('p_status').value = p.status || 'ativo';
+            document.getElementById('p_repo').value = p.repositorio_url || '';
+            document.getElementById('p_desc').value = p.descricao || '';
+            document.getElementById('modalProjeto').style.display = 'flex';
+        }
+
+        function abrirModalDuplicar() {
+            document.getElementById('formDuplicarProjeto').reset();
+            atualizarDadosOrigem();
+            document.getElementById('modalDuplicarProjeto').style.display = 'flex';
+        }
+
+        function abrirModalDuplicarComProjeto(id, nome, slug, branch, clienteId) {
+            document.getElementById('dup_origem_id').value = id;
+            document.getElementById('dup_novo_nome').value = nome + ' (Cópia)';
+            document.getElementById('dup_novo_slug').value = slug + '_copia';
+            document.getElementById('dup_nova_branch').value = 'branch-' + slug;
+            document.getElementById('dup_cliente_id').value = clienteId || '';
+            document.getElementById('modalDuplicarProjeto').style.display = 'flex';
+        }
+
+        function atualizarDadosOrigem() {
+            const sel = document.getElementById('dup_origem_id');
+            const opt = sel.options[sel.selectedIndex];
+            if (opt && opt.dataset) {
+                const slug = opt.dataset.slug || 'proj';
+                document.getElementById('dup_novo_nome').value = (opt.dataset.nome || '') + ' (Novo Cliente)';
+                document.getElementById('dup_novo_slug').value = slug + '_custom';
+                document.getElementById('dup_nova_branch').value = 'branch-' + slug + '-custom';
+                if (opt.dataset.cliente) {
+                    document.getElementById('dup_cliente_id').value = opt.dataset.cliente;
+                }
+            }
+        }
+
+        function confirmarExcluirProjeto(id, nome) {
+            if (confirm(`Tem certeza que deseja excluir o projeto '${nome}'? As instâncias vinculadas serão desvinculadas.`)) {
+                const f = document.createElement('form');
+                f.method = 'POST';
+                f.action = `/admin/projeto/excluir/${id}`;
+                document.body.appendChild(f);
+                f.submit();
+            }
+        }
+
+        function confirmarSair() {
+            document.getElementById('modalConfirmarSair').style.display = 'flex';
+        }
+    </script>
+</body>
+</html>

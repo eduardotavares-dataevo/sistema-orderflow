@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Usuários — OrderFlow Admin</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #0b0f19;
+            --bg-sidebar: #111827;
+            --bg-card: #1f2937;
+            --bg-card-hover: #374151;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --border-color: #374151;
+            --sidebar-width: 250px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex; flex-direction: column; justify-content: space-between;
+            position: fixed; top: 0; bottom: 0; left: 0; z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 1.5rem 1.25rem; font-size: 1.25rem; font-weight: 700;
+            color: var(--primary); display: flex; align-items: center; gap: 0.625rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .sidebar-brand span { color: var(--text-main); }
+
+        .sidebar-menu { padding: 1.25rem 0.75rem; display: flex; flex-direction: column; gap: 0.375rem; flex: 1; }
+        .sidebar-link {
+            display: flex; align-items: center; gap: 0.875rem; padding: 0.75rem 1rem;
+            color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.9375rem;
+            border-radius: 10px; transition: all 0.2s ease;
+        }
+        .sidebar-link:hover { background-color: var(--bg-card-hover); color: var(--text-main); }
+        .sidebar-link.active { background-color: rgba(59, 130, 246, 0.15); color: var(--primary); font-weight: 600; }
+        .sidebar-submenu {
+            margin-left: 1.25rem;
+            border-left: 2px solid rgba(255, 255, 255, 0.08);
+            padding-left: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            margin-top: 0.25rem;
+            margin-bottom: 0.25rem;
+        }
+        .sidebar-sublink {
+            display: flex; align-items: center; gap: 0.625rem; padding: 0.5rem 0.75rem;
+            color: var(--text-muted); text-decoration: none; font-size: 0.85rem; font-weight: 500;
+            border-radius: 8px; transition: all 0.2s ease;
+        }
+        .sidebar-sublink:hover { background-color: var(--bg-card-hover); color: var(--text-main); }
+        .sidebar-sublink.active { background-color: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 600; }
+
+        .sidebar-footer { padding: 1.25rem 1rem; border-top: 1px solid var(--border-color); background-color: rgba(0, 0, 0, 0.1); }
+        .user-profile { display: flex; align-items: center; justify-content: space-between; }
+        .user-details { font-size: 0.8125rem; }
+        .user-name { font-weight: 600; color: var(--text-main); display: block; }
+        .user-role { color: var(--text-muted); font-size: 0.75rem; }
+
+        .btn-logout {
+            background: rgba(239, 68, 68, 0.1); color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.2); padding: 0.5rem 0.75rem;
+            border-radius: 8px; cursor: pointer; font-size: 0.8125rem; font-weight: 600;
+            transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.375rem;
+        }
+        .btn-logout:hover { background: var(--accent-red); color: #fff; }
+
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            flex: 1; padding: 2rem 2.5rem; width: calc(100% - var(--sidebar-width));
+        }
+
+        .actions-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .btn-primary { background-color: var(--primary); color: #fff; border: none; padding: 0.625rem 1.25rem; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-secondary { background: transparent; color: var(--text-muted); border: 1px solid var(--border-color); padding: 0.625rem 1.25rem; border-radius: 8px; cursor: pointer; }
+        .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 6px; }
+
+        .table-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; width: 100%; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background-color: rgba(0, 0, 0, 0.25); padding: 1rem 1.25rem; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
+        td { padding: 1.1rem 1.25rem; border-top: 1px solid var(--border-color); font-size: 0.9375rem; }
+        tr:hover td { background-color: rgba(255, 255, 255, 0.02); }
+
+        .badge { padding: 0.25rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .badge-admin { background-color: rgba(59, 130, 246, 0.2); color: var(--primary); }
+        .badge-restrito { background-color: rgba(245, 158, 11, 0.2); color: var(--accent-amber); }
+        .badge-ativo { background-color: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.75); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(5px); }
+        .modal { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 2rem; width: 100%; max-width: 450px; }
+        .modal-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 1.25rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.375rem; font-size: 0.85rem; color: var(--text-muted); }
+        .form-control { width: 100%; padding: 0.625rem 0.875rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); outline: none; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
+        /* Toast Notification no Rodapé Direito */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .toast {
+            pointer-events: auto;
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-left: 5px solid var(--primary);
+            color: #f9fafb;
+            padding: 14px 18px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            min-width: 320px;
+            max-width: 420px;
+            position: relative;
+            overflow: hidden;
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .toast-inserir { border-left-color: var(--accent-green); }
+        .toast-alterar { border-left-color: var(--primary); }
+        .toast-deletar { border-left-color: var(--accent-red); }
+
+        .toast-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .toast-icon { font-size: 1.25rem; }
+
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .toast-progress-bar {
+            height: 100%;
+            width: 100%;
+            background: var(--primary);
+            animation: toastTimer linear forwards;
+        }
+
+        .toast-inserir .toast-progress-bar { background: var(--accent-green); }
+        .toast-alterar .toast-progress-bar { background: var(--primary); }
+        .toast-deletar .toast-progress-bar { background: var(--accent-red); }
+
+        @keyframes slideIn {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(120%); opacity: 0; }
+        }
+
+        @keyframes toastTimer {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+    <aside class="sidebar">
+        <div>
+            <div class="sidebar-brand">
+                ⚡ <span>OrderFlow</span>
+            </div>
+            <nav class="sidebar-menu">
+                {% if tem_permissao('projetos', 'ver') %}
+                <div class="sidebar-nav-group">
+                    <a href="/projetos" class="sidebar-link">
+                        <span>📁</span> Projetos & Branches
+                    </a>
+                    {% if tem_permissao('tenants', 'ver') %}
+                    <div class="sidebar-submenu">
+                        <a href="/instancias" class="sidebar-sublink">
+                            <span>🖥️</span> Instâncias (Tenants)
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% elif tem_permissao('tenants', 'ver') %}
+                <a href="/instancias" class="sidebar-link">
+                    <span>🖥️</span> Instâncias (Tenants)
+                </a>
+                {% endif %}
+                {% if tem_permissao('clientes', 'ver') %}
+                <a href="/clientes" class="sidebar-link">
+                    <span>🏢</span> Clientes (Empresas)
+                </a>
+                {% endif %}
+                {% if tem_permissao('versoes', 'ver') %}
+                <a href="/versoes" class="sidebar-link">
+                    <span>🚀</span> Versões & Releases
+                </a>
+                {% endif %}
+                {% if tem_permissao('usuarios', 'ver') %}
+                <a href="/usuarios" class="sidebar-link active">
+                    <span>👥</span> Usuários Admin
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="user-details">
+                    <span class="user-name">{{ session.get('admin_user_nome') }}</span>
+                    <span class="user-role">{{ session.get('admin_perfil')|upper }}</span>
+                </div>
+                <button class="btn-logout" onclick="confirmarSair()">
+                    🚪 Sair
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-wrapper">
+        <div class="actions-header">
+            <h2>Usuários do Painel Admin</h2>
+            <div style="display: flex; gap: 0.75rem;">
+                {% if tem_permissao('usuarios', 'gerenciar') %}
+                <button class="btn-primary" onclick="abrirModalNovo()">+ Novo Usuário</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Usuário</th>
+                        <th>Nome Completo</th>
+                        <th>Perfil / Nível</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in usuarios %}
+                    <tr>
+                        <td><strong>{{ u.username }}</strong></td>
+                        <td>{{ u.nome }}</td>
+                        <td>
+                            {% if u.perfil == 'admin' %}
+                            <span class="badge badge-admin">Administrador (Total)</span>
+                            {% else %}
+                            <span class="badge badge-restrito">Uso Restrito (Granular)</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge badge-ativo">{{ u.status }}</span></td>
+                        <td>
+                            <div style="display: flex; gap: 0.375rem; align-items: center;">
+                                {% if u.perfil != 'admin' and tem_permissao('usuarios', 'gerenciar') %}
+                                <button class="btn-secondary btn-sm" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); font-weight: 600;" onclick='abrirModalPermissoes({{ u|tojson }})'>🔐 Permissões</button>
+                                {% endif %}
+                                {% if session.get('admin_perfil') == 'admin' or session.get('admin_user_id') == u.id or tem_permissao('usuarios', 'gerenciar') %}
+                                <button class="btn-secondary btn-sm" onclick='abrirModalAlterarSenha({{ u.id }}, "{{ u.username }}")'>Senha</button>
+                                {% endif %}
+                                {% if tem_permissao('usuarios', 'gerenciar') and session.get('admin_user_id') != u.id %}
+                                <button class="btn-secondary btn-sm" style="color: var(--accent-red); border-color: rgba(239,68,68,0.3);" onclick="confirmarDeletarUsuario({{ u.id }}, '{{ u.username }}')">Deletar</button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal Novo Usuário -->
+    <div class="modal-overlay" id="modalNovoUsuario">
+        <div class="modal">
+            <div class="modal-title">Cadastrar Novo Usuário</div>
+            <form action="/admin/usuario/novo" method="POST">
+                <div class="form-group">
+                    <label>Username / Login</label>
+                    <input type="text" name="username" class="form-control" required placeholder="ex: joao.suporte">
+                </div>
+                <div class="form-group">
+                    <label>Nome Completo</label>
+                    <input type="text" name="nome" class="form-control" required placeholder="João da Silva">
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" name="password" class="form-control" required placeholder="••••••••">
+                </div>
+                <div class="form-group">
+                    <label>Perfil</label>
+                    <select name="perfil" class="form-control">
+                        <option value="restrito">Uso Restrito (Visualização Apenas)</option>
+                        <option value="admin">Administrador (Acesso Total)</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalNovoUsuario')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Criar Usuário</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Alterar Senha -->
+    <div class="modal-overlay" id="modalSenha">
+        <div class="modal">
+            <div class="modal-title">Alterar Senha</div>
+            <form action="/admin/usuario/alterar-senha" method="POST">
+                <input type="hidden" name="user_id" id="pwd_user_id">
+                <div class="form-group">
+                    <label>Usuário</label>
+                    <input type="text" id="pwd_username" class="form-control" readonly style="opacity: 0.7;">
+                </div>
+                <div class="form-group">
+                    <label>Nova Senha</label>
+                    <input type="password" name="nova_senha" class="form-control" required placeholder="Digite a nova senha...">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalSenha')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Atualizar Senha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Confirmação Exclusão de Usuário -->
+    <div class="modal-overlay" id="modalDeletarUsuario">
+        <div class="modal" style="max-width: 420px; text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🗑️</div>
+            <div class="modal-title" style="margin-bottom: 0.5rem;">Excluir Usuário?</div>
+            <p id="descDeletarUsuario" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;"></p>
+            <form id="formDeletarUsuario" method="POST">
+                <div class="modal-actions" style="justify-content: center; gap: 1rem;">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalDeletarUsuario')">Cancelar</button>
+                    <button type="submit" class="btn-primary" style="background-color: var(--accent-red);">Sim, Excluir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Gerenciador de Permissões Granulares -->
+    <div class="modal-overlay" id="modalPermissoes">
+        <div class="modal" style="max-width: 620px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                <div>
+                    <div class="modal-title" style="margin-bottom: 0.25rem;">🔐 Gerenciar Permissões de Acesso</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">Configurando acessos para: <strong id="perm_username_label" style="color: #38bdf8;"></strong></div>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="button" class="btn-secondary btn-sm" onclick="marcarTodasPermissoes(true)">Marcar Tudo</button>
+                    <button type="button" class="btn-secondary btn-sm" onclick="marcarApenasVisualizar()">Só Visualizar</button>
+                    <button type="button" class="btn-secondary btn-sm" onclick="marcarTodasPermissoes(false)">Desmarcar</button>
+                </div>
+            </div>
+
+            <form action="/admin/usuario/permissoes/salvar" method="POST">
+                <input type="hidden" name="user_id" id="perm_user_id">
+
+                <div style="display: flex; flex-direction: column; gap: 0.875rem; max-height: 60vh; overflow-y: auto; padding-right: 0.25rem;">
+                    
+                    <!-- Módulo 1: Tenants -->
+                    <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+                        <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.625rem; display: flex; align-items: center; gap: 0.5rem; color: #f9fafb;">
+                            <span>🖥️</span> 1. Instâncias (Tenants)
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.625rem; font-size: 0.85rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="perm_tenants_ver" id="perm_tenants_ver" value="1">
+                                <span>Visualizar Menu / Lista</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="perm_tenants_editar" id="perm_tenants_editar" value="1">
+                                <span>Cadastrar / Editar Instância</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="perm_tenants_excluir" id="perm_tenants_excluir" value="1">
+                                <span>Excluir Instância</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="perm_tenants_acoes" id="perm_tenants_acoes" value="1">
+                                <span>Matar Sessões Ativas</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Módulo 2: Clientes -->
+                    <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+                        <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.625rem; display: flex; align-items: center; gap: 0.5rem; color: #f9fafb;">
+                            <span>🏢</span> 2. Clientes (Empresas)
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.625rem; font-size: 0.85rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="perm_clientes_ver" id="perm_clientes_ver" value="1">
+                                <span>Visualizar Menu / Lista</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="perm_clientes_editar" id="perm_clientes_editar" value="1">
+                                <span>Cadastrar / Editar Cliente</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="perm_clientes_excluir" id="perm_clientes_excluir" value="1">
+                                <span>Excluir Cliente</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Módulo 3: Versões -->
+                    <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+                        <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.625rem; display: flex; align-items: center; gap: 0.5rem; color: #f9fafb;">
+                            <span>🚀</span> 3. Versões & Releases
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.625rem; font-size: 0.85rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="perm_versoes_ver" id="perm_versoes_ver" value="1">
+                                <span>Visualizar Menu / Versões</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="perm_versoes_editar" id="perm_versoes_editar" value="1">
+                                <span>Incluir / Editar Versão</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="perm_versoes_excluir" id="perm_versoes_excluir" value="1">
+                                <span>Excluir Versão</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="perm_versoes_deploy" id="perm_versoes_deploy" value="1">
+                                <span>Executar Deploy / Rollback</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Módulo 4: Usuários -->
+                    <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+                        <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.625rem; display: flex; align-items: center; gap: 0.5rem; color: #f9fafb;">
+                            <span>👥</span> 4. Usuários do Painel Admin
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.625rem; font-size: 0.85rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="perm_usuarios_ver" id="perm_usuarios_ver" value="1">
+                                <span>Visualizar Menu / Usuários</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="perm_usuarios_gerenciar" id="perm_usuarios_gerenciar" value="1">
+                                <span>Criar / Editar / Excluir Usuários</span>
+                            </label>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="modal-actions" style="margin-top: 1.5rem;">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalPermissoes')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar Permissões</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Validação / Confirmação de Sair -->
+    <div class="modal-overlay" id="modalConfirmarSair">
+        <div class="modal" style="max-width: 400px; text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🚪</div>
+            <div class="modal-title" style="margin-bottom: 0.5rem;">Deseja realmente sair?</div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Sua sessão no Painel Admin será encerrada.</p>
+            <div class="modal-actions" style="justify-content: center; gap: 1rem;">
+                <button type="button" class="btn-secondary" onclick="fecharModal('modalConfirmarSair')">Cancelar</button>
+                <a href="/logout" class="btn-primary" style="background-color: var(--accent-red);">Sim, Sair</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Função Toast no Rodapé Direito com Timer
+        function showToast(message, type = 'inserir', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+
+            let icon = '✅';
+            if (type === 'alterar') icon = '✏️';
+            if (type === 'deletar') icon = '🗑️';
+
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <span class="toast-icon">${icon}</span>
+                    <span>${message}</span>
+                </div>
+                <div class="toast-progress">
+                    <div class="toast-progress-bar" style="animation-duration: ${duration}ms;"></div>
+                </div>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const msg = urlParams.get('msg');
+            const tipo = urlParams.get('tipo') || 'inserir';
+            if (msg) {
+                showToast(msg, tipo, 4000);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        });
+
+        function confirmarSair() {
+            document.getElementById('modalConfirmarSair').style.display = 'flex';
+        }
+        function abrirModalNovo() {
+            document.getElementById('modalNovoUsuario').style.display = 'flex';
+        }
+        function abrirModalSenhaPropria() {
+            abrirModalAlterarSenha({{ session.get('admin_user_id') }}, "{{ session.get('admin_username') }}");
+        }
+        function abrirModalAlterarSenha(id, username) {
+            document.getElementById('pwd_user_id').value = id;
+            document.getElementById('pwd_username').value = username;
+            document.getElementById('modalSenha').style.display = 'flex';
+        }
+        function confirmarDeletarUsuario(id, username) {
+            document.getElementById('descDeletarUsuario').innerText = `Tem certeza que deseja excluir o usuário '${username}'?`;
+            document.getElementById('formDeletarUsuario').action = `/admin/usuario/deletar/${id}`;
+            document.getElementById('modalDeletarUsuario').style.display = 'flex';
+        }
+        function abrirModalPermissoes(u) {
+            document.getElementById('perm_user_id').value = u.id;
+            document.getElementById('perm_username_label').innerText = `${u.nome} (@${u.username})`;
+            
+            let p = {};
+            if (u.permissoes) {
+                try {
+                    p = typeof u.permissoes === 'string' ? JSON.parse(u.permissoes) : u.permissoes;
+                } catch(e) {
+                    p = {};
+                }
+            }
+
+            const t = p.tenants || {};
+            document.getElementById('perm_tenants_ver').checked = t.ver !== false;
+            document.getElementById('perm_tenants_editar').checked = !!t.editar;
+            document.getElementById('perm_tenants_excluir').checked = !!t.excluir;
+            document.getElementById('perm_tenants_acoes').checked = !!t.acoes;
+
+            const c = p.clientes || {};
+            document.getElementById('perm_clientes_ver').checked = c.ver !== false;
+            document.getElementById('perm_clientes_editar').checked = !!c.editar;
+            document.getElementById('perm_clientes_excluir').checked = !!c.excluir;
+
+            const v = p.versoes || {};
+            document.getElementById('perm_versoes_ver').checked = v.ver !== false;
+            document.getElementById('perm_versoes_editar').checked = !!v.editar;
+            document.getElementById('perm_versoes_excluir').checked = !!v.excluir;
+            document.getElementById('perm_versoes_deploy').checked = !!v.deploy;
+
+            const us = p.usuarios || {};
+            document.getElementById('perm_usuarios_ver').checked = !!us.ver;
+            document.getElementById('perm_usuarios_gerenciar').checked = !!us.gerenciar;
+
+            document.getElementById('modalPermissoes').style.display = 'flex';
+        }
+
+        function marcarTodasPermissoes(marcar) {
+            const ids = [
+                'perm_tenants_ver', 'perm_tenants_editar', 'perm_tenants_excluir', 'perm_tenants_acoes',
+                'perm_clientes_ver', 'perm_clientes_editar', 'perm_clientes_excluir',
+                'perm_versoes_ver', 'perm_versoes_editar', 'perm_versoes_excluir', 'perm_versoes_deploy',
+                'perm_usuarios_ver', 'perm_usuarios_gerenciar'
+            ];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.checked = marcar;
+            });
+        }
+
+        function marcarApenasVisualizar() {
+            marcarTodasPermissoes(false);
+            ['perm_tenants_ver', 'perm_clientes_ver', 'perm_versoes_ver'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.checked = true;
+            });
+        }
+
+        function fecharModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+
+{% block titulo_pagina %}Business Intelligence (BI) - Vendas & Faturamento{% endblock %}
+
+{% block conteudo %}
+<!-- Chart.js para renderização de gráficos profissionais de BI -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<div style="display: flex; flex-direction: column; gap: 12px;">
+
+  <!-- PAINEL SUPERIOR: FILTROS E BARRA DE FERRAMENTAS DO BI -->
+  <div class="quadrante-card" style="margin-bottom: 0;">
+    <div class="quadrante-header" style="background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); color: #ffffff;">
+      <div class="quadrante-header-title" style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 15px;">📊</span>
+        <strong style="font-size: 12px; letter-spacing: 0.3px; color: #f8fafc;">
+          Business Intelligence — Vendas & Faturamento Geral (CND_FAT_GERAL)
+        </strong>
+        <span id="bi-badge-vendedores" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 10px; padding: 1px 8px; border-radius: 10px; font-weight: 700;">
+          0 vendedores
+        </span>
+      </div>
+      <div class="quadrante-header-tools" style="display: flex; align-items: center; gap: 8px;">
+        <button type="button" class="sankhya-tool-btn" onclick="carregarDadosBI()" style="height: 24px; padding: 0 10px; font-size: 11px; font-weight: 700; color: #38bdf8; background: rgba(56, 189, 248, 0.1); border-color: rgba(56, 189, 248, 0.3);">
+          <i class="fa-solid fa-arrows-rotate"></i> Atualizar
+        </button>
+      </div>
+    </div>
+
+    <!-- Barra de Filtros do BI -->
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 11.5px;">
+        <label style="font-weight: 700; color: #475569;">Período:</label>
+        <input type="date" id="bi-filtro-dt-ini" class="sankhya-input" style="height: 26px; font-size: 11px; padding: 0 8px; width: 130px;">
+        <span style="color: #64748b;">a</span>
+        <input type="date" id="bi-filtro-dt-fim" class="sankhya-input" style="height: 26px; font-size: 11px; padding: 0 8px; width: 130px;">
+        
+        <button type="button" class="sankhya-tool-btn" onclick="carregarDadosBI()" style="height: 26px; padding: 0 12px; font-size: 11px; font-weight: 700; background: #00A859; color: #ffffff; border-color: #008f4c;">
+          Filtrar
+        </button>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+          <i class="fa-solid fa-magnifying-glass" style="color: #94a3b8;"></i>
+          <input type="text" id="bi-busca-tabela" placeholder="Buscar por vendedor ou empresa..." onkeyup="filtrarTabelaBI(this.value)" class="sankhya-input" style="height: 26px; font-size: 11px; padding: 0 8px; width: 220px;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Cards de Indicadores (KPIs Executivos) -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 12px 16px; background: #ffffff;">
+      <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #00A859; padding: 10px 12px; border-radius: 4px;">
+        <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">Faturamento Total</div>
+        <div id="kpi-faturamento-total" style="font-size: 19px; font-weight: 800; color: #00A859; margin-top: 4px;">R$ 0,00</div>
+        <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Total no período selecionado</div>
+      </div>
+
+      <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0284c7; padding: 10px 12px; border-radius: 4px;">
+        <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">Venda em Promoção</div>
+        <div id="kpi-venda-promocao" style="font-size: 19px; font-weight: 800; color: #0284c7; margin-top: 4px;">R$ 0,00</div>
+        <div id="kpi-perc-promocao" style="font-size: 10px; color: #0284c7; margin-top: 2px; font-weight: 600;">0,00 % do total</div>
+      </div>
+
+      <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #6366f1; padding: 10px 12px; border-radius: 4px;">
+        <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">Venda sem Promoção</div>
+        <div id="kpi-venda-sem-promocao" style="font-size: 19px; font-weight: 800; color: #4338ca; margin-top: 4px;">R$ 0,00</div>
+        <div id="kpi-perc-sem-promocao" style="font-size: 10px; color: #4338ca; margin-top: 2px; font-weight: 600;">0,00 % do total</div>
+      </div>
+
+      <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #f59e0b; padding: 10px 12px; border-radius: 4px;">
+        <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">Volume Total (Qtd. Neg.)</div>
+        <div id="kpi-qtd-neg" style="font-size: 19px; font-weight: 800; color: #b45309; margin-top: 4px;">0</div>
+        <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Peças negociadas</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRÁFICOS ANALÍTICOS DE BI -->
+  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+    <!-- Gráfico 1: Vendas por Vendedor (Barras Horizontais / Comparativo) -->
+    <div class="quadrante-card" style="margin-bottom: 0;">
+      <div class="quadrante-header" style="background: #f1f5f9; border-bottom: 1px solid #cbd5e1;">
+        <div class="quadrante-header-title">
+          <i class="fa-solid fa-chart-column" style="color: #00A859;"></i>
+          <span style="font-size: 11.5px; font-weight: 700; color: #0f172a;">Ranking de Faturamento por Vendedor</span>
+        </div>
+      </div>
+      <div class="quadrante-body" style="padding: 14px; height: 320px; position: relative;">
+        <canvas id="chart-vendas-vendedor"></canvas>
+      </div>
+    </div>
+
+    <!-- Gráfico 2: Composição Promocional vs Não Promocional (Rosca) -->
+    <div class="quadrante-card" style="margin-bottom: 0;">
+      <div class="quadrante-header" style="background: #f1f5f9; border-bottom: 1px solid #cbd5e1;">
+        <div class="quadrante-header-title">
+          <i class="fa-solid fa-chart-pie" style="color: #0284c7;"></i>
+          <span style="font-size: 11.5px; font-weight: 700; color: #0f172a;">Mix de Venda (Promoção vs Regular)</span>
+        </div>
+      </div>
+      <div class="quadrante-body" style="padding: 14px; height: 320px; position: relative;">
+        <canvas id="chart-mix-promocao"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABELA ANALÍTICA DETALHADA DO BI (COM TOTAIS FIXOS NO RODAPÉ) -->
+  <div class="quadrante-card" style="margin-bottom: 0; display: flex; flex-direction: column; max-height: 480px;">
+    <div class="quadrante-header" style="background: #1e293b; color: #ffffff;">
+      <div class="quadrante-header-title">
+        <i class="fa-solid fa-table" style="color: #38bdf8;"></i>
+        <span style="font-size: 11.5px; font-weight: 700; color: #f8fafc;">Detalhamento Analítico por Vendedor</span>
+      </div>
+    </div>
+
+    <!-- Tabela Scrollável com Thead Fixo -->
+    <div id="bi-scroll-container" style="flex: 1; min-height: 220px; overflow-y: auto; overflow-x: auto;">
+      <table class="snk-table" id="bi-tabela-vendas" style="width: 100%; min-width: 1050px; table-layout: fixed; font-size: 11px; border-collapse: separate; border-spacing: 0;">
+        <colgroup>
+          <col style="width: 80px;">   <!-- Cód. -->
+          <col style="width: 170px;">  <!-- Vendedor -->
+          <col style="width: 140px;">  <!-- Empresa -->
+          <col style="width: 110px;">  <!-- Valor -->
+          <col style="width: 75px;">   <!-- % Valor -->
+          <col style="width: 75px;">   <!-- Qtd. -->
+          <col style="width: 75px;">   <!-- % Qtd. -->
+          <col style="width: 120px;">  <!-- Venda em Promoção -->
+          <col style="width: 120px;">  <!-- Venda s/ Promoção -->
+          <col style="width: 90px;">   <!-- % s/ Promoção -->
+          <col style="width: 90px;">   <!-- % Promoção -->
+        </colgroup>
+        <thead style="position: sticky; top: 0; background: #0f172a; color: #f8fafc; z-index: 20; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+          <tr>
+            <th style="text-align: center;">Cód. Vended.</th>
+            <th>Vendedor</th>
+            <th>Empresa</th>
+            <th style="text-align: right;">Valor</th>
+            <th style="text-align: right;">% Valor</th>
+            <th style="text-align: right;">Qtd.</th>
+            <th style="text-align: right;">% Qtd.</th>
+            <th style="text-align: right;">Venda em Promoção</th>
+            <th style="text-align: right;">Venda s/ Promoção</th>
+            <th style="text-align: right;">% s/ Promoção</th>
+            <th style="text-align: right;">% Promoção</th>
+          </tr>
+        </thead>
+        <tbody id="bi-tbody-vendas">
+          <tr>
+            <td colspan="11" class="snk-table-empty" style="text-align: center; padding: 35px; color: #64748b;">
+              <i class="fa-solid fa-spinner fa-spin" style="font-size: 18px; color: #0284c7; margin-bottom: 8px; display: block;"></i>
+              Carregando dados de BI...
+            </td>
+          </tr>
+        </tbody>
+        <tfoot style="position: sticky; bottom: 0; z-index: 15;">
+          <tr style="font-weight: 800;">
+            <td colspan="3" style="position: sticky; bottom: 0; background: #0f172a; border-top: 1px solid #334155; text-align: right; padding: 7px 10px; font-weight: 800; letter-spacing: 0.5px; color: #f8fafc;">TOTAIS:</td>
+            <td id="bi-tot-valor" style="position: sticky; bottom: 0; background: #0f172a; border-top: 1px solid #334155; text-align: right; padding: 7px 10px; color: #10b981; font-weight: 800;">R$ 0,00</td>
+            <td id="bi-tot-perc-valor" style="position: sticky; bottom: 0; background: #0f172a; border-top: 1px solid #334155; text-align: right; padding: 7px 10px; color: #f8fafc;">100,00 %</td>
+            <td id="bi-tot-qtd" style="position: sticky; bottom: 0; background: #0f172a; border-top: 1px solid #334155; text-align: right; padding: 7px 10px; color: #f8fafc;">0</td>
+            <td id="bi-tot-perc-qtd" style="position: sticky; bottom: 0; background: #0f172a; border-top: 1px solid #334155; text-align: right; padding: 7px 10px; color: #f8fafc;">100,00 %</td>
+            <td id="bi-tot-venda-promocao" style="position: sticky; bottom: 0; background: #0f172a; border-top: 1px solid #334155; text-align: right; padding: 7px 10px; color: #38bdf8;">R$ 0,00</td>
+            <td id="bi-tot-venda-sem-promocao" style="position: sticky; bottom: 0; background: #0f172a; border-top: 1px solid #334155; text-align: right; padding: 7px 10px; color: #f8fafc;">R$ 0,00</td>
+            <td id="bi-tot-perc-sem-promocao" style="position: sticky; bottom: 0; background: #0f172a; border-top: 1px solid #334155; text-align: right; padding: 7px 10px; color: #f8fafc;">0,00 %</td>
+            <td id="bi-tot-perc-promocao" style="position: sticky; bottom: 0; background: #0f172a; border-top: 1px solid #334155; text-align: right; padding: 7px 10px; color: #fb7185;">0,00 %</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let biDadosVendas = [];
+  let chartVendasInstance = null;
+  let chartMixInstance = null;
+
+  function formatarMoedaBR(valor) {
+    return (Number(valor) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  function formatarNumeroBR(valor, casas = 2) {
+    return (Number(valor) || 0).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
+  }
+
+  function carregarDadosBI() {
+    const dtIni = document.getElementById("bi-filtro-dt-ini").value;
+    const dtFim = document.getElementById("bi-filtro-dt-fim").value;
+    const tbody = document.getElementById("bi-tbody-vendas");
+
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="11" style="text-align: center; padding: 30px; color: #64748b;">
+          <i class="fa-solid fa-spinner fa-spin" style="font-size: 18px; color: #0284c7; margin-bottom: 8px; display: block;"></i>
+          Carregando dados de BI e inteligência de vendas...
+        </td>
+      </tr>
+    `;
+
+    let url = "/api/dashboard/faturamento-geral";
+    const params = [];
+    if (dtIni) params.push("dt_ini=" + encodeURIComponent(dtIni));
+    if (dtFim) params.push("dt_fim=" + encodeURIComponent(dtFim));
+    if (params.length > 0) url += "?" + params.join("&");
+
+    fetch(url)
+      .then(res => res.json())
+      .then(res => {
+        if (res.status === "1" && res.dados) {
+          biDadosVendas = res.dados.linhas || [];
+          renderizarDashboardBI(biDadosVendas, res.dados.totais);
+        } else {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="11" style="text-align: center; padding: 25px; color: #ef4444;">
+                Falha ao carregar dados: ${res.mensagem || 'Erro desconhecido'}
+              </td>
+            </tr>
+          `;
+        }
+      })
+      .catch(err => {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="11" style="text-align: center; padding: 25px; color: #ef4444;">
+              Erro de comunicação com o servidor.
+            </td>
+          </tr>
+        `;
+      });
+  }
+
+  function renderizarDashboardBI(linhas, totais) {
+    const tbody = document.getElementById("bi-tbody-vendas");
+    const badge = document.getElementById("bi-badge-vendedores");
+
+    if (badge) badge.textContent = `${linhas.length} vendedores`;
+
+    // Atualiza KPIs
+    if (totais) {
+      document.getElementById("kpi-faturamento-total").textContent = formatarMoedaBR(totais.total);
+      document.getElementById("kpi-venda-promocao").textContent = formatarMoedaBR(totais.venda_promocao);
+      document.getElementById("kpi-perc-promocao").textContent = formatarNumeroBR(totais.perc_promocao) + " % do total";
+      document.getElementById("kpi-venda-sem-promocao").textContent = formatarMoedaBR(totais.venda_sem_promocao);
+      document.getElementById("kpi-perc-sem-promocao").textContent = formatarNumeroBR(totais.perc_sem_promocao) + " % do total";
+      document.getElementById("kpi-qtd-neg").textContent = formatarNumeroBR(totais.qtd_neg, 0);
+
+      // Rodapé de Totais
+      document.getElementById("bi-tot-valor").textContent = formatarMoedaBR(totais.total);
+      document.getElementById("bi-tot-perc-valor").textContent = formatarNumeroBR(totais.perc_val) + " %";
+      document.getElementById("bi-tot-qtd").textContent = formatarNumeroBR(totais.qtd_neg, 0);
+      document.getElementById("bi-tot-perc-qtd").textContent = formatarNumeroBR(totais.perc_qtd) + " %";
+      document.getElementById("bi-tot-venda-promocao").textContent = formatarMoedaBR(totais.venda_promocao);
+      document.getElementById("bi-tot-venda-sem-promocao").textContent = formatarMoedaBR(totais.venda_sem_promocao);
+      document.getElementById("bi-tot-perc-sem-promocao").textContent = formatarNumeroBR(totais.perc_sem_promocao) + " %";
+      document.getElementById("bi-tot-perc-promocao").textContent = formatarNumeroBR(totais.perc_promocao) + " %";
+    }
+
+    // Renderiza Linhas da Tabela
+    if (!linhas || linhas.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="11" style="text-align: center; padding: 25px; color: #64748b;">
+            Nenhum registro encontrado no período selecionado.
+          </td>
+        </tr>
+      `;
+    } else {
+      let html = "";
+      linhas.forEach(item => {
+        html += `
+          <tr style="border-bottom: 1px solid rgba(148, 163, 184, 0.2);">
+            <td style="text-align: center; font-weight: 700; color: #0284c7;">#${item.codvend}</td>
+            <td style="font-weight: 600; color: #0f172a;">${item.apelido || '-'}</td>
+            <td style="color: #475569; font-weight: 500;">
+              <span style="background: rgba(2, 132, 199, 0.08); color: #0284c7; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">
+                ${item.nomefantasia || '-'}
+              </span>
+            </td>
+            <td style="text-align: right; font-weight: 700; color: #00A859;">${formatarMoedaBR(item.total)}</td>
+            <td style="text-align: right; font-weight: 600;">${formatarNumeroBR(item.perc_val)} %</td>
+            <td style="text-align: right; font-weight: 600;">${formatarNumeroBR(item.qtd_neg, 0)}</td>
+            <td style="text-align: right; font-weight: 600;">${formatarNumeroBR(item.perc_qtd)} %</td>
+            <td style="text-align: right; color: #0284c7; font-weight: 600;">${formatarMoedaBR(item.venda_promocao)}</td>
+            <td style="text-align: right; font-weight: 600;">${formatarMoedaBR(item.venda_sem_promocao)}</td>
+            <td style="text-align: right;">${formatarNumeroBR(item.perc_sem_promocao)} %</td>
+            <td style="text-align: right; color: #e11d48; font-weight: 600;">${formatarNumeroBR(item.perc_promocao)} %</td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
+
+    // Renderiza os Gráficos
+    renderizarGraficosBI(linhas, totais);
+  }
+
+  function renderizarGraficosBI(linhas, totais) {
+    if (typeof Chart === "undefined") return;
+
+    // 1. Gráfico de Ranking de Vendedores
+    const ctxVendas = document.getElementById("chart-vendas-vendedor");
+    if (ctxVendas) {
+      if (chartVendasInstance) chartVendasInstance.destroy();
+
+      const topVendedores = (linhas || []).slice(0, 10);
+      const labels = topVendedores.map(v => v.apelido || `#${v.codvend}`);
+      const dadosTotal = topVendedores.map(v => v.total || 0);
+      const dadosPromocao = topVendedores.map(v => v.venda_promocao || 0);
+
+      chartVendasInstance = new Chart(ctxVendas, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Faturamento Total",
+              data: dadosTotal,
+              backgroundColor: "rgba(0, 168, 89, 0.8)",
+              borderColor: "#00A859",
+              borderWidth: 1,
+              borderRadius: 4
+            },
+            {
+              label: "Em Promoção",
+              data: dadosPromocao,
+              backgroundColor: "rgba(2, 132, 199, 0.75)",
+              borderColor: "#0284c7",
+              borderWidth: 1,
+              borderRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "top", labels: { font: { size: 11, family: "Inter" } } },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  return context.dataset.label + ": " + formatarMoedaBR(context.raw);
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function (value) { return "R$ " + (value / 1000) + "k"; },
+                font: { size: 10 }
+              }
+            },
+            x: {
+              ticks: { font: { size: 10 } }
+            }
+          }
+        }
+      });
+    }
+
+    // 2. Gráfico de Rosca: Mix Promoção vs Regular
+    const ctxMix = document.getElementById("chart-mix-promocao");
+    if (ctxMix) {
+      if (chartMixInstance) chartMixInstance.destroy();
+
+      const vlrPromo = (totais && totais.venda_promocao) || 0;
+      const vlrSemPromo = (totais && totais.venda_sem_promocao) || 0;
+
+      chartMixInstance = new Chart(ctxMix, {
+        type: "doughnut",
+        data: {
+          labels: ["Venda sem Promoção", "Venda em Promoção"],
+          datasets: [{
+            data: [vlrSemPromo, vlrPromo],
+            backgroundColor: [
+              "rgba(67, 56, 202, 0.85)",
+              "rgba(2, 132, 199, 0.85)"
+            ],
+            borderColor: ["#4338ca", "#0284c7"],
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom", labels: { font: { size: 11, family: "Inter" } } },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  const total = vlrPromo + vlrSemPromo;
+                  const perc = total > 0 ? ((context.raw / total) * 100).toFixed(1) : 0;
+                  return `${context.label}: ${formatarMoedaBR(context.raw)} (${perc}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  function filtrarTabelaBI(termo) {
+    termo = (termo || "").toUpperCase().trim();
+    if (!termo) {
+      renderizarDashboardBI(biDadosVendas);
+      return;
+    }
+    const filtrados = biDadosVendas.filter(i => {
+      const vend = (i.apelido || "").toUpperCase();
+      const cod = String(i.codvend || "");
+      const emp = (i.nomefantasia || "").toUpperCase();
+      return vend.includes(termo) || cod.includes(termo) || emp.includes(termo);
+    });
+    renderizarDashboardBI(filtrados);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const agora = new Date();
+    const ano = agora.getFullYear();
+    const mes = String(agora.getMonth() + 1).padStart(2, "0");
+    const dia = String(agora.getDate()).padStart(2, "0");
+
+    const inputIni = document.getElementById("bi-filtro-dt-ini");
+    const inputFim = document.getElementById("bi-filtro-dt-fim");
+    if (inputIni) inputIni.value = `${ano}-${mes}-01`;
+    if (inputFim) inputFim.value = `${ano}-${mes}-${dia}`;
+
+    carregarDadosBI();
+  });
+</script>
+{% endblock %}
+

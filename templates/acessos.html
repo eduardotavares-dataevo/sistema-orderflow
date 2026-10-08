@@ -1,0 +1,1059 @@
+{% extends "base.html" %}
+
+{% block titulo_pagina %}Gestão de Acessos & Permissões do OrderFlow{% endblock %}
+
+{% block conteudo %}
+<div style="display: flex; flex-direction: column; gap: 12px; max-width: 1300px; margin: 0 auto;">
+
+  <!-- CABEÇALHO INFORMATIVO DE SEGURANÇA -->
+  <div class="quadrante-card" style="margin-bottom: 0;">
+    <div class="quadrante-header" style="justify-content: space-between;">
+      <div class="quadrante-header-title">
+        <i class="fa-solid fa-shield-halved" style="color: #0284c7;"></i>
+        <span>Controle de Acessos e Permissões do Sistema</span>
+      </div>
+      <div class="quadrante-header-tools">
+        <span style="background: #0284c7; color: #fff; font-size: 9px; padding: 2px 7px; border-radius: 3px; font-weight: 700;">
+          {% if is_superadmin %}SUPER ADMIN DO TENANT{% else %}ADMINISTRADOR{% endif %}
+        </span>
+      </div>
+    </div>
+    <div class="quadrante-body" style="padding: 12px 14px;">
+      <div style="background: rgba(2, 132, 199, 0.07); border: 1px solid rgba(2, 132, 199, 0.25); border-left: 4px solid #0284c7; padding: 10px 14px; border-radius: 4px; font-size: 11.5px; color: #0369a1; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+        <div>
+          <strong style="color: #0f172a;">Gestão de Acesso Desacoplada:</strong>
+          <span>O controle de quem pode acessar o OrderFlow é realizado diretamente nesta tela. A validação de usuário e senha continua sendo feita no Sankhya OM, mas o acesso ao sistema é concedido apenas aos grupos ou usuários liberados abaixo.</span>
+        </div>
+        <div style="flex-shrink: 0;">
+          <span style="background: #10b981; color: #fff; font-size: 10px; padding: 3px 8px; border-radius: 3px; font-weight: 700;">Ativo</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEÇÃO 1: CRUD DE GRUPOS DE USUÁRIOS PERMITIDOS -->
+  <div class="quadrante-card" style="margin-bottom: 0;">
+    <div class="quadrante-header" style="justify-content: space-between;">
+      <div class="quadrante-header-title">
+        <i class="fa-solid fa-users" style="color: #00A859;"></i>
+        <span>1. Grupos de Usuários com Acesso Permitido</span>
+        <span style="font-size: 10px; color: #64748b; font-weight: 500; margin-left: 6px;">(Usuários destes grupos entram automaticamente)</span>
+      </div>
+      <div class="quadrante-header-tools">
+        <button type="button" class="snk-tool-btn-large" onclick="abrirModalNovoGrupo()" style="background: #00A859 !important; color: #fff !important; font-weight: 700 !important; border: 1px solid #008f4c !important; height: 24px; padding: 0 10px; gap: 5px;" title="Adicionar Grupo Permitido">
+          <i class="fa-solid fa-plus"></i> <span>Incluir Grupo</span>
+        </button>
+      </div>
+    </div>
+    <div class="quadrante-body" style="padding: 10px 14px;">
+      <div class="snk-table-container">
+        <table class="snk-table" style="width: 100%; font-size: 11px;">
+          <thead>
+            <tr>
+              <th style="width: 100px; text-align: center;">Cód. Grupo</th>
+              <th>Nome / Descrição do Grupo Sankhya</th>
+              <th style="width: 120px; text-align: center;">Status</th>
+              <th style="width: 140px; text-align: center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if grupos_permitidos %}
+              {% for g in grupos_permitidos %}
+              <tr>
+                <td style="text-align: center; font-weight: 700; color: #0284c7;">#{{ g.codgrupo }}</td>
+                <td style="font-weight: 600;">
+                  <i class="fa-solid fa-folder" style="color: #64748b; margin-right: 6px;"></i>
+                  {{ g.nomegrupo or 'Grupo #' ~ g.codgrupo }}
+                </td>
+                <td style="text-align: center;">
+                  {% if g.ativo == 1 %}
+                    <span style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 7px; border-radius: 3px; font-weight: 700; font-size: 10px;">🟢 Ativo</span>
+                  {% else %}
+                    <span style="background: rgba(100, 116, 139, 0.12); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.3); padding: 2px 7px; border-radius: 3px; font-weight: 600; font-size: 10px;">⚪ Inativo</span>
+                  {% endif %}
+                </td>
+                <td style="text-align: center;">
+                  <button type="button" onclick="alternarStatusGrupo({{ g.id }})" class="sankhya-tool-btn" style="height: 22px; padding: 0 6px; font-size: 10px; margin-right: 4px;" title="Alternar Ativo/Inativo">
+                    {% if g.ativo == 1 %}<i class="fa-solid fa-pause" style="color: #d97706;"></i> Desativar{% else %}<i class="fa-solid fa-play" style="color: #059669;"></i> Ativar{% endif %}
+                  </button>
+                  <button type="button" onclick="excluirGrupo({{ g.id }}, '{{ g.nomegrupo }}')" class="sankhya-tool-btn" style="height: 22px; padding: 0 6px; font-size: 10px; color: #ef4444;" title="Excluir Permissão">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="4" style="text-align: center; padding: 22px; color: #64748b;">
+                  Nenhum grupo cadastrado no momento. Clique em <strong>Incluir Grupo</strong> para liberar uma equipe.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEÇÃO 2: CRUD DE USUÁRIOS INDIVIDUAIS PERMITIDOS -->
+  <div class="quadrante-card" style="margin-bottom: 0;">
+    <div class="quadrante-header" style="justify-content: space-between;">
+      <div class="quadrante-header-title">
+        <i class="fa-solid fa-user-check" style="color: #0284c7;"></i>
+        <span>2. Usuários com Permissão Individual</span>
+        <span style="font-size: 10px; color: #64748b; font-weight: 500; margin-left: 6px;">(Acesso individual com definição de Administrador ou Operador)</span>
+      </div>
+      <div class="quadrante-header-tools">
+        <button type="button" class="snk-tool-btn-large" onclick="abrirModalNovoUsuario()" style="background: #0284c7 !important; color: #fff !important; font-weight: 700 !important; border: 1px solid #0369a1 !important; height: 24px; padding: 0 10px; gap: 5px;" title="Adicionar Usuário Permitido">
+          <i class="fa-solid fa-user-plus"></i> <span>Incluir Usuário</span>
+        </button>
+      </div>
+    </div>
+    <div class="quadrante-body" style="padding: 10px 14px;">
+      <div class="snk-table-container">
+        <table class="snk-table" style="width: 100%; font-size: 11px;">
+          <thead>
+            <tr>
+              <th style="width: 90px; text-align: center;">Cód. Usuário</th>
+              <th>Login / Nome no Sankhya</th>
+              <th>Vendedor Vinculado</th>
+              <th style="width: 130px; text-align: center;">Perfil no OrderFlow</th>
+              <th style="width: 100px; text-align: center;">Status</th>
+              <th style="width: 170px; text-align: center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if usuarios_permitidos %}
+              {% for u in usuarios_permitidos %}
+              <tr>
+                <td style="text-align: center; font-weight: 700; color: #0284c7;">#{{ u.codusu }}</td>
+                <td style="font-weight: 600;">
+                  <i class="fa-solid fa-user" style="color: #64748b; margin-right: 6px;"></i>
+                  {{ u.nomeusu }}
+                </td>
+                <td style="color: #475569;">{{ u.nomevend or '-' }}</td>
+                <td style="text-align: center;">
+                  {% if u.is_admin == 1 %}
+                    <span style="background: #00A859; color: #fff; padding: 2px 8px; border-radius: 3px; font-weight: 700; font-size: 9.5px;">ADMIN</span>
+                  {% else %}
+                    <span style="background: #0284c7; color: #fff; padding: 2px 8px; border-radius: 3px; font-weight: 600; font-size: 9.5px;">OPERADOR</span>
+                  {% endif %}
+                </td>
+                <td style="text-align: center;">
+                  {% if u.ativo == 1 %}
+                    <span style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 7px; border-radius: 3px; font-weight: 700; font-size: 10px;">🟢 Ativo</span>
+                  {% else %}
+                    <span style="background: rgba(100, 116, 139, 0.12); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.3); padding: 2px 7px; border-radius: 3px; font-weight: 600; font-size: 10px;">⚪ Inativo</span>
+                  {% endif %}
+                </td>
+                <td style="text-align: center;">
+                  <button type="button" onclick="alternarPerfilAdmin({{ u.id }})" class="sankhya-tool-btn" style="height: 22px; padding: 0 6px; font-size: 10px; margin-right: 3px;" title="Alternar entre Admin e Operador">
+                    <i class="fa-solid fa-user-shield"></i> Perfil
+                  </button>
+                  <button type="button" onclick="alternarStatusUsuario({{ u.id }})" class="sankhya-tool-btn" style="height: 22px; padding: 0 6px; font-size: 10px; margin-right: 3px;" title="Alternar Ativo/Inativo">
+                    {% if u.ativo == 1 %}<i class="fa-solid fa-pause" style="color: #d97706;"></i>{% else %}<i class="fa-solid fa-play" style="color: #059669;"></i>{% endif %}
+                  </button>
+                  <button type="button" onclick="excluirUsuario({{ u.id }}, '{{ u.nomeusu }}')" class="sankhya-tool-btn" style="height: 22px; padding: 0 6px; font-size: 10px; color: #ef4444;" title="Excluir Permissão">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 22px; color: #64748b;">
+                  Nenhum usuário com permissão individual direta cadastrado. Clique em <strong>Incluir Usuário</strong> para adicionar.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEÇÃO 3: SESSÕES DE USUÁRIOS ATIVOS (COM KILL SESSION) -->
+  <div class="quadrante-card" style="margin-bottom: 0;">
+    <div class="quadrante-header" style="justify-content: space-between;">
+      <div class="quadrante-header-title">
+        <i class="fa-solid fa-signal" style="color: #10b981;"></i>
+        <span>3. Sessões de Usuários Ativos no Tenant</span>
+        <span style="font-size: 10px; color: #64748b; font-weight: 500; margin-left: 6px;">(Usuários conectados no momento consumindo licença)</span>
+      </div>
+      <div class="quadrante-header-tools">
+        <button type="button" class="snk-tool-btn-large" onclick="window.location.href=window.location.pathname+'?_t='+Date.now();" style="height: 24px; padding: 0 10px; gap: 5px;" title="Atualizar Lista de Sessões">
+          <i class="fa-solid fa-rotate"></i> <span>Atualizar</span>
+        </button>
+      </div>
+    </div>
+    <div class="quadrante-body" style="padding: 10px 14px;">
+      <div class="snk-table-container">
+        <table class="snk-table" style="width: 100%; font-size: 11px;">
+          <thead>
+            <tr>
+              <th style="width: 90px; text-align: center;">Cód. Usuário</th>
+              <th>Nome / Usuário Conectado</th>
+              <th style="width: 140px; text-align: center;">Endereço IP</th>
+              <th style="width: 160px; text-align: center;">Última Atividade (Ping)</th>
+              <th style="width: 140px; text-align: center;">Status</th>
+              <th style="width: 150px; text-align: center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if sessoes_ativas %}
+              {% for s in sessoes_ativas %}
+              <tr id="linha-sessao-{{ s.id }}">
+                <td style="text-align: center; font-weight: 700; color: #10b981;">#{{ s.codusu }}</td>
+                <td style="font-weight: 600;">
+                  <i class="fa-solid fa-circle-user" style="color: #10b981; margin-right: 6px;"></i>
+                  {{ s.nome_usuario }}
+                  {% if s.session_token == token_sessao_atual %}
+                    <span style="background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 700; margin-left: 6px;">Sua Sessão</span>
+                  {% endif %}
+                </td>
+                <td style="text-align: center; font-family: monospace; color: #64748b;">{{ s.ip_address or '-' }}</td>
+                <td style="text-align: center; color: #475569;">{{ s.ultimo_ping }}</td>
+                <td style="text-align: center;">
+                  <span style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 7px; border-radius: 3px; font-weight: 700; font-size: 10px;">🟢 Conectado</span>
+                </td>
+                <td style="text-align: center;">
+                  <button type="button" 
+                          data-session-id="{{ s.id }}"
+                          data-session-token="{{ s.session_token }}"
+                          data-user-name="{{ s.nome_usuario }}"
+                          data-is-self="{{ 'true' if s.session_token == token_sessao_atual else 'false' }}"
+                          onclick="aoClicarMatarSessao(this)" 
+                          class="sankhya-tool-btn" 
+                          style="height: 24px; padding: 0 8px; font-size: 10.5px; font-weight: 700; color: #ef4444; border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.06);" 
+                          title="Derrubar / Encerrar Sessão Imediatamente">
+                    <i class="fa-solid fa-power-off"></i> Matar Sessão
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 22px; color: #64748b;">
+                  Nenhuma sessão de usuário ativa registrada no momento.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL 1: INCLUIR GRUPO DE USUÁRIOS SANKHYA -->
+<div id="modal-novo-grupo" class="snk-modal-backdrop" style="display: none; z-index: 999999;" onclick="if (event.target === this) fecharModalGrupo();">
+  <div class="snk-modal-dialog" style="width: 530px; max-width: 95vw; background: #ffffff; border-radius: 6px; box-shadow: 0 16px 40px rgba(0,0,0,0.4); border: 1px solid #cbd5e1; overflow: hidden; display: flex; flex-direction: column;">
+    <!-- Cabeçalho Sankhya OM -->
+    <div style="background: #020617; color: #ffffff; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #00A859;">
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px;">
+        <i class="fa-solid fa-users" style="color: #00A859;"></i>
+        <span>Liberar Grupo de Usuários (Sankhya OM)</span>
+      </div>
+      <button type="button" onclick="fecharModalGrupo()" class="snk-lib-close-btn" style="color: #94a3b8;" title="Fechar (Esc)">✕</button>
+    </div>
+    <!-- Corpo -->
+    <div style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+      <p style="font-size: 11px; color: #64748b; margin: 0;">Selecione um grupo de usuários cadastrado no Sankhya OM:</p>
+      
+      <!-- Campo com Pesquisa (Padrão das Telas do Sankhya OM) -->
+      <div>
+        <label class="form-field-label" style="font-weight: 700; font-size: 11px; margin-bottom: 5px; display: block;">
+          <span style="color: #dc2626;">*</span> Grupo do Sankhya:
+        </label>
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <input type="text" id="modal-input-codgrupo" class="form-input-compact" 
+                 placeholder="Cód." style="width: 70px; text-align: center; font-weight: 700;"
+                 title="Digite o código do grupo ou clique na lupa para buscar"
+                 onchange="aoDigitarCodigoGrupo(this.value)">
+          <button type="button" id="btn-busca-grupo-modal" class="snk-search-field-btn" 
+                  title="Pesquisar Grupo" onclick="abrirModalBuscaGrupoSankhya()">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </button>
+          <input type="text" id="modal-input-nomegrupo" class="form-input-compact" 
+                 placeholder="Clique na lupa para selecionar o grupo..." readonly 
+                 style="flex: 1; cursor: pointer; font-weight: 600;" 
+                 onclick="abrirModalBuscaGrupoSankhya()">
+        </div>
+      </div>
+    </div>
+    <!-- Rodapé -->
+    <div class="snk-confirm-footer">
+      <button type="button" class="snk-tool-btn-large" onclick="fecharModalGrupo()" style="height: 28px; padding: 0 14px; font-size: 11px;">Cancelar</button>
+      <button type="button" class="snk-tool-btn-large" onclick="salvarNovoGrupo()" style="background: #00A859 !important; color: #fff !important; font-weight: 700 !important; height: 28px; padding: 0 16px; border: 1px solid #008f4c !important; font-size: 11px;"><i class="fa-solid fa-floppy-disk" style="margin-right: 4px;"></i> Salvar Permissão</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL POPUP DE PESQUISA DE GRUPOS SANKHYA -->
+<div id="modal-busca-grupo-sankhya" class="snk-modal-backdrop" style="display: none; z-index: 1000000;" onclick="if (event.target === this) fecharModalBuscaGrupoSankhya();">
+  <div class="snk-modal-dialog" style="width: 680px; max-width: 95vw; background: #ffffff; border-radius: 6px; box-shadow: 0 16px 40px rgba(0,0,0,0.4); border: 1px solid #cbd5e1; overflow: hidden; display: flex; flex-direction: column;">
+    
+    <!-- Cabeçalho Sankhya OM -->
+    <div style="background: #020617; color: #ffffff; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #00A859;">
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px;">
+        <i class="fa-solid fa-magnifying-glass" style="color: #00A859;"></i>
+        <span>Pesquisa de Grupos do Sankhya</span>
+      </div>
+      <button type="button" onclick="fecharModalBuscaGrupoSankhya()" class="snk-lib-close-btn" style="color: #94a3b8;" title="Fechar (Esc)">✕</button>
+    </div>
+
+    <!-- Corpo do Modal -->
+    <div style="padding: 12px; display: flex; flex-direction: column; gap: 10px;">
+      
+      <!-- Linha de Pesquisa -->
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <div class="snk-modal-search-box" style="flex: 1; display: flex; align-items: center; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0 8px;">
+          <i class="fa-solid fa-magnifying-glass snk-modal-search-icon" style="color: #64748b; margin-right: 8px;"></i>
+          <input type="text" id="modal-busca-grupo-input" class="snk-modal-search-field"
+                 placeholder="Digite Código ou Nome do Grupo e tecle Enter..." 
+                 autocomplete="off" style="width: 100%; height: 32px; border: none; outline: none; font-size: 11.5px;"
+                 oninput="filtrarGruposSankhya(this.value)">
+        </div>
+        <button type="button" class="snk-tool-btn-large" 
+                style="height: 34px; padding: 0 16px; background: #00A859; color: #ffffff; font-weight: 700; border-radius: 4px; border: 1px solid #008f4c; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 11px;" 
+                onclick="filtrarGruposSankhya(document.getElementById('modal-busca-grupo-input').value)">
+          <i class="fa-solid fa-filter"></i>
+          <span>Filtrar</span>
+        </button>
+      </div>
+
+      <div class="snk-modal-info-bar" style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #64748b; padding: 2px 2px;">
+        <span>Dê duplo clique na linha para selecionar o grupo</span>
+        <span id="modal-busca-grupo-count" style="font-weight: 700; color: #00A859;">Exibindo {{ grupos_sankhya|length }} grupos</span>
+      </div>
+
+      <!-- Tabela de Resultados -->
+      <div class="snk-table-container" style="max-height: 300px; min-height: 180px; overflow-y: auto;">
+        <table class="snk-table" style="width: 100%; border-collapse: collapse; font-size: 11px;">
+          <thead style="position: sticky; top: 0; z-index: 2;">
+            <tr>
+              <th style="width: 80px; text-align: center;">Cód. Grupo</th>
+              <th>Nome / Descrição do Grupo</th>
+              <th style="width: 130px; text-align: center;">Total Usuários</th>
+              <th style="width: 80px; text-align: center;">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="modal-busca-grupo-tbody">
+            {% for g in grupos_sankhya %}
+            <tr class="snk-modal-row" style="cursor: pointer;"
+                data-cod="{{ g.codgrupo }}"
+                data-nome="{{ g.nomegrupo }}"
+                ondblclick="selecionarGrupoSankhyaGrid({{ g.codgrupo }}, '{{ g.nomegrupo }}')">
+              <td style="text-align: center; font-weight: 700; color: #0284c7;">#{{ g.codgrupo }}</td>
+              <td style="font-weight: 600;">
+                <i class="fa-solid fa-folder" style="color: #64748b; margin-right: 6px;"></i>
+                {{ g.nomegrupo }}
+              </td>
+              <td style="text-align: center; color: #475569;">{{ g.total_usuarios }} usuário(s)</td>
+              <td style="text-align: center;">
+                <button type="button" class="snk-tool-btn-large" 
+                        style="height: 20px; font-size: 10px; padding: 0 8px; background: #00A859; color: #ffffff; border-color: #008f4c; font-weight: 700;" 
+                        onclick="selecionarGrupoSankhyaGrid({{ g.codgrupo }}, '{{ g.nomegrupo }}')">
+                  Selecionar
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="snk-confirm-footer">
+      <button type="button" class="snk-tool-btn-large" onclick="fecharModalBuscaGrupoSankhya()" style="height: 28px; padding: 0 14px; font-size: 11px;">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 2: INCLUIR USUÁRIO INDIVIDUAL SANKHYA -->
+<div id="modal-novo-usuario" class="snk-modal-backdrop" style="display: none; z-index: 999999;" onclick="if (event.target === this) fecharModalUsuario();">
+  <div class="snk-modal-dialog" style="width: 530px; max-width: 95vw; background: #ffffff; border-radius: 6px; box-shadow: 0 16px 40px rgba(0,0,0,0.4); border: 1px solid #cbd5e1; overflow: hidden; display: flex; flex-direction: column;">
+    <!-- Cabeçalho Sankhya OM -->
+    <div style="background: #020617; color: #ffffff; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #0284c7;">
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px;">
+        <i class="fa-solid fa-user-plus" style="color: #38bdf8;"></i>
+        <span>Liberar Usuário Individual (Sankhya OM)</span>
+      </div>
+      <button type="button" onclick="fecharModalUsuario()" class="snk-lib-close-btn" style="color: #94a3b8;" title="Fechar (Esc)">✕</button>
+    </div>
+    <!-- Corpo -->
+    <div style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+      <p style="font-size: 11px; color: #64748b; margin: 0;">Selecione um usuário cadastrado no Sankhya OM:</p>
+      
+      <!-- Campo com Pesquisa (Padrão das Telas do Sankhya OM) -->
+      <div>
+        <label class="form-field-label" style="font-weight: 700; font-size: 11px; margin-bottom: 5px; display: block;">
+          <span style="color: #dc2626;">*</span> Usuário do Sankhya:
+        </label>
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <input type="text" id="modal-input-codusu" class="form-input-compact" 
+                 placeholder="Cód." style="width: 70px; text-align: center; font-weight: 700;"
+                 title="Digite o código do usuário ou clique na lupa para buscar"
+                 onchange="aoDigitarCodigoUsuario(this.value)">
+          <button type="button" id="btn-busca-usuario-modal" class="snk-search-field-btn" 
+                  title="Pesquisar Usuário" onclick="abrirModalBuscaUsuarioSankhya()">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </button>
+          <input type="text" id="modal-input-nomeusu" class="form-input-compact" 
+                 placeholder="Clique na lupa para selecionar o usuário..." readonly 
+                 style="flex: 1; cursor: pointer; font-weight: 600;" 
+                 onclick="abrirModalBuscaUsuarioSankhya()">
+        </div>
+        <!-- Dados complementares ocultos para salvar -->
+        <input type="hidden" id="modal-input-nomevend" value="">
+      </div>
+
+      <!-- Checkbox de Concessão de Perfil Administrador / Super Admin -->
+      <div style="background: rgba(2, 132, 199, 0.05); border: 1px solid rgba(2, 132, 199, 0.25); border-radius: 4px; padding: 12px; cursor: pointer;" 
+           onclick="if (event.target.id !== 'modal-check-isadmin') { const chk = document.getElementById('modal-check-isadmin'); chk.checked = !chk.checked; }">
+        <label for="modal-check-isadmin" style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 11.5px; font-weight: 700; user-select: none; margin: 0;">
+          <input type="checkbox" id="modal-check-isadmin" value="1" 
+                 style="width: 18px; height: 18px; cursor: pointer; accent-color: #0284c7; margin: 0; flex-shrink: 0;"
+                 onclick="event.stopPropagation();">
+          <span style="color: #0369a1; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-user-shield" style="font-size: 13px;"></i> Conceder Permissão de Administrador (Super Admin)
+          </span>
+        </label>
+        <div style="font-size: 10px; color: #64748b; margin-top: 4px; margin-left: 28px;">
+          Permite gerenciar permissões, grupos, usuários e configurações gerais do sistema.
+        </div>
+      </div>
+    </div>
+    <!-- Rodapé -->
+    <div class="snk-confirm-footer">
+      <button type="button" class="snk-tool-btn-large" onclick="fecharModalUsuario()" style="height: 28px; padding: 0 14px; font-size: 11px;">Cancelar</button>
+      <button type="button" class="snk-tool-btn-large" onclick="salvarNovoUsuario()" style="background: #0284c7 !important; color: #fff !important; font-weight: 700 !important; height: 28px; padding: 0 16px; border: 1px solid #0369a1 !important; font-size: 11px;"><i class="fa-solid fa-floppy-disk" style="margin-right: 4px;"></i> Salvar Permissão</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL POPUP DE PESQUISA DE USUÁRIOS SANKHYA -->
+<div id="modal-busca-usuario-sankhya" class="snk-modal-backdrop" style="display: none; z-index: 1000000;" onclick="if (event.target === this) fecharModalBuscaUsuarioSankhya();">
+  <div class="snk-modal-dialog" style="width: 720px; max-width: 95vw; background: #ffffff; border-radius: 6px; box-shadow: 0 16px 40px rgba(0,0,0,0.4); border: 1px solid #cbd5e1; overflow: hidden; display: flex; flex-direction: column;">
+    
+    <!-- Cabeçalho Sankhya OM -->
+    <div style="background: #020617; color: #ffffff; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #0284c7;">
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px;">
+        <i class="fa-solid fa-magnifying-glass" style="color: #38bdf8;"></i>
+        <span>Pesquisa de Usuários do Sankhya</span>
+      </div>
+      <button type="button" onclick="fecharModalBuscaUsuarioSankhya()" class="snk-lib-close-btn" style="color: #94a3b8;" title="Fechar (Esc)">✕</button>
+    </div>
+
+    <!-- Corpo do Modal -->
+    <div style="padding: 12px; display: flex; flex-direction: column; gap: 10px;">
+      
+      <!-- Linha de Pesquisa -->
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <div class="snk-modal-search-box" style="flex: 1; display: flex; align-items: center; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0 8px;">
+          <i class="fa-solid fa-magnifying-glass snk-modal-search-icon" style="color: #64748b; margin-right: 8px;"></i>
+          <input type="text" id="modal-busca-usuario-input" class="snk-modal-search-field"
+                 placeholder="Digite Código, Login ou Vendedor e tecle Enter..." 
+                 autocomplete="off" style="width: 100%; height: 32px; border: none; outline: none; font-size: 11.5px;"
+                 oninput="filtrarUsuariosSankhya(this.value)">
+        </div>
+        <button type="button" class="snk-tool-btn-large" 
+                style="height: 34px; padding: 0 16px; background: #0284c7; color: #ffffff; font-weight: 700; border-radius: 4px; border: 1px solid #0369a1; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 11px;" 
+                onclick="filtrarUsuariosSankhya(document.getElementById('modal-busca-usuario-input').value)">
+          <i class="fa-solid fa-filter"></i>
+          <span>Filtrar</span>
+        </button>
+      </div>
+
+      <div class="snk-modal-info-bar" style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #64748b; padding: 2px 2px;">
+        <span>Dê duplo clique na linha para selecionar o usuário</span>
+        <span id="modal-busca-usuario-count" style="font-weight: 700; color: #0284c7;">Exibindo {{ usuarios_sankhya|length }} usuários</span>
+      </div>
+
+      <!-- Tabela de Resultados -->
+      <div class="snk-table-container" style="max-height: 300px; min-height: 180px; overflow-y: auto;">
+        <table class="snk-table" style="width: 100%; border-collapse: collapse; font-size: 11px;">
+          <thead style="position: sticky; top: 0; z-index: 2;">
+            <tr>
+              <th style="width: 70px; text-align: center;">Cód.</th>
+              <th>Login / Usuário</th>
+              <th>Vendedor Vinculado</th>
+              <th>Grupo Sankhya</th>
+              <th style="width: 80px; text-align: center;">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="modal-busca-usuario-tbody">
+            {% for u in usuarios_sankhya %}
+            <tr class="snk-modal-row" style="cursor: pointer;"
+                data-cod="{{ u.codusu }}"
+                data-login="{{ u.nomeusu }}"
+                data-vend="{{ u.nomevend }}"
+                data-grupo="{{ u.nomegrupo }}"
+                ondblclick="selecionarUsuarioSankhyaGrid({{ u.codusu }}, '{{ u.nomeusu }}', '{{ u.nomevend }}')">
+              <td style="text-align: center; font-weight: 700; color: #0284c7;">#{{ u.codusu }}</td>
+              <td style="font-weight: 600;">
+                <i class="fa-solid fa-user" style="color: #64748b; margin-right: 6px;"></i>
+                {{ u.nomeusu }}
+              </td>
+              <td style="color: #475569;">{{ u.nomevend or '-' }}</td>
+              <td style="color: #64748b;">{{ u.nomegrupo or '-' }}</td>
+              <td style="text-align: center;">
+                <button type="button" class="snk-tool-btn-large" 
+                        style="height: 20px; font-size: 10px; padding: 0 8px; background: #0284c7; color: #ffffff; border-color: #0369a1; font-weight: 700;" 
+                        onclick="selecionarUsuarioSankhyaGrid({{ u.codusu }}, '{{ u.nomeusu }}', '{{ u.nomevend }}')">
+                  Selecionar
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="snk-confirm-footer">
+      <button type="button" class="snk-tool-btn-large" onclick="fecharModalBuscaUsuarioSankhya()" style="height: 28px; padding: 0 14px; font-size: 11px;">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL POPUP DE CONFIRMAÇÃO DE EXCLUSÃO (PADRÃO SANKHYA OM) -->
+<div id="modal-confirmar-exclusao" class="snk-modal-backdrop" style="display: none; z-index: 999999;" onclick="if (event.target === this) fecharModalConfirmacao();">
+  <div class="snk-modal-dialog snk-confirm-dialog" style="max-width: 480px;">
+    
+    <!-- Cabeçalho do Modal -->
+    <div class="snk-confirm-header">
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; color: #ffffff;">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span id="modal-confirm-header-title">Confirmar Exclusão</span>
+      </div>
+      <button type="button" onclick="fecharModalConfirmacao()" class="snk-lib-close-btn" style="color: #ffffff;" title="Cancelar (Esc)">✕</button>
+    </div>
+
+    <!-- Corpo do Modal -->
+    <div class="snk-confirm-body" style="flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: flex-start; gap: 12px;">
+        <div class="snk-confirm-icon-box">
+          <i class="fa-solid fa-trash-can"></i>
+        </div>
+        <div style="flex: 1;">
+          <div class="snk-confirm-title" id="modal-confirm-title">
+            Deseja realmente remover?
+          </div>
+          <div class="snk-confirm-text" id="modal-confirm-text">
+            O item será removido permanentemente da lista de permissões.
+          </div>
+          <div class="snk-confirm-alert-box">
+            ⚠️ O usuário ou grupo perderá o acesso imediato ao OrderFlow.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="snk-confirm-footer">
+      <button type="button" class="snk-tool-btn-large" style="padding: 0 14px; height: 28px; font-size: 11px;" onclick="fecharModalConfirmacao()">Cancelar</button>
+      <button type="button" id="btn-executar-exclusao-confirmada" class="snk-tool-btn-large" style="padding: 0 14px; height: 28px; font-size: 11px; background: #ef4444 !important; color: #ffffff !important; border-color: #dc2626 !important; font-weight: 700;" onclick="confirmarExecucaoExclusao()">
+        <i class="fa-solid fa-trash-can" style="margin-right: 4px;"></i> Sim, Remover
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL POPUP DE CONFIRMAÇÃO DE DERRUBAR SESSÃO (PADRÃO SANKHYA OM / ORDERFLOW) -->
+<div id="modal-confirmar-derrubar-sessao" class="snk-modal-backdrop" style="display: none; z-index: 999999;" onclick="if (event.target === this) fecharModalDerrubarSessao();">
+  <div class="snk-modal-dialog snk-confirm-dialog" style="max-width: 480px;">
+    
+    <!-- Cabeçalho do Modal -->
+    <div class="snk-confirm-header" style="background: #ef4444; border-bottom: 2px solid #b91c1c;">
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; color: #ffffff;">
+        <i class="fa-solid fa-power-off"></i>
+        <span id="modal-derrubar-header-title">Encerrar Sessão Ativa</span>
+      </div>
+      <button type="button" onclick="fecharModalDerrubarSessao()" class="snk-lib-close-btn" style="color: #ffffff;" title="Cancelar (Esc)">✕</button>
+    </div>
+
+    <!-- Corpo do Modal -->
+    <div class="snk-confirm-body" style="flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: flex-start; gap: 12px;">
+        <div class="snk-confirm-icon-box" style="background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25);">
+          <i class="fa-solid fa-power-off"></i>
+        </div>
+        <div style="flex: 1;">
+          <div class="snk-confirm-title" id="modal-derrubar-title">
+            Deseja realmente derrubar a sessão?
+          </div>
+          <div class="snk-confirm-text" id="modal-derrubar-text">
+            A sessão do usuário será desconectada imediatamente.
+          </div>
+          <div class="snk-confirm-alert-box" id="modal-derrubar-alert-box">
+            ⚠️ O usuário perderá o acesso e a licença consumida será liberada no tenant.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="snk-confirm-footer">
+      <button type="button" class="snk-tool-btn-large" style="padding: 0 14px; height: 28px; font-size: 11px;" onclick="fecharModalDerrubarSessao()">Cancelar</button>
+      <button type="button" id="btn-executar-derrubar-sessao" class="snk-tool-btn-large" style="padding: 0 14px; height: 28px; font-size: 11px; background: #ef4444 !important; color: #ffffff !important; border-color: #dc2626 !important; font-weight: 700;" onclick="confirmarExecucaoDerrubarSessao()">
+        <i class="fa-solid fa-power-off" style="margin-right: 4px;"></i> Sim, Derrubar Sessão
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Estado para exclusão confirmada
+  let itemParaExcluir = null; // { tipo: 'grupo' | 'usuario', id: number, nome: string }
+
+  function abrirModalConfirmarExclusao(tipo, id, nome) {
+    itemParaExcluir = { tipo, id, nome };
+    const titleEl = document.getElementById("modal-confirm-title");
+    const textEl = document.getElementById("modal-confirm-text");
+    const headerTitleEl = document.getElementById("modal-confirm-header-title");
+
+    if (tipo === "grupo") {
+      headerTitleEl.textContent = "Remover Grupo Permitido";
+      titleEl.textContent = "Deseja realmente remover este grupo?";
+      textEl.innerHTML = `O grupo <strong style="color: #ef4444;">${nome || id}</strong> será removido. Todos os usuários deste grupo perderão acesso ao sistema (exceto se possuírem liberação individual).`;
+    } else {
+      headerTitleEl.textContent = "Remover Usuário Permitido";
+      titleEl.textContent = "Deseja realmente remover este usuário?";
+      textEl.innerHTML = `O usuário <strong style="color: #ef4444;">${nome || id}</strong> será removido da lista de acessos individuais permitidos.`;
+    }
+
+    document.getElementById("modal-confirmar-exclusao").style.display = "flex";
+  }
+
+  function fecharModalConfirmacao() {
+    itemParaExcluir = null;
+    document.getElementById("modal-confirmar-exclusao").style.display = "none";
+  }
+
+  function confirmarExecucaoExclusao() {
+    if (!itemParaExcluir) return;
+
+    const { tipo, id } = itemParaExcluir;
+    const url = tipo === "grupo" ? "/api/acessos/grupos/excluir" : "/api/acessos/usuarios/excluir";
+
+    const btnSim = document.getElementById("btn-executar-exclusao-confirmada");
+    const originalContent = btnSim.innerHTML;
+    btnSim.disabled = true;
+    btnSim.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i> Removendo...`;
+
+    fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: id })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === "1") {
+        window.location.reload();
+      } else {
+        alert(data.mensagem || "Erro ao excluir registro.");
+        btnSim.disabled = false;
+        btnSim.innerHTML = originalContent;
+      }
+    })
+    .catch(err => {
+      alert("Erro ao conectar com o servidor.");
+      btnSim.disabled = false;
+      btnSim.innerHTML = originalContent;
+    });
+  }
+
+  // Atalho de teclado Esc para fechar qualquer modal
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+      fecharModalBuscaGrupoSankhya();
+      fecharModalBuscaUsuarioSankhya();
+      fecharModalConfirmacao();
+      fecharModalGrupo();
+      fecharModalUsuario();
+      fecharModalDerrubarSessao();
+    }
+  });
+
+  // Lista de Grupos do Sankhya OM disponibilizada pelo backend
+  const listaGruposSankhyaMemoria = [
+    {% for g in grupos_sankhya %}
+    {
+      codgrupo: {{ g.codgrupo }},
+      nomegrupo: "{{ g.nomegrupo or '' }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
+
+  // Controle de Modais de Grupos
+  function abrirModalNovoGrupo() {
+    document.getElementById("modal-input-codgrupo").value = "";
+    document.getElementById("modal-input-nomegrupo").value = "";
+    document.getElementById("modal-novo-grupo").style.display = "flex";
+  }
+
+  function fecharModalGrupo() {
+    document.getElementById("modal-novo-grupo").style.display = "none";
+  }
+
+  function abrirModalBuscaGrupoSankhya() {
+    const inputFiltro = document.getElementById("modal-busca-grupo-input");
+    if (inputFiltro) inputFiltro.value = "";
+    filtrarGruposSankhya("");
+    document.getElementById("modal-busca-grupo-sankhya").style.display = "flex";
+    setTimeout(() => {
+      if (inputFiltro) {
+        inputFiltro.focus();
+        inputFiltro.select();
+      }
+    }, 60);
+  }
+
+  function fecharModalBuscaGrupoSankhya() {
+    document.getElementById("modal-busca-grupo-sankhya").style.display = "none";
+  }
+
+  function filtrarGruposSankhya(termo) {
+    const termoClean = (termo || "").trim().toLowerCase();
+    const tbody = document.getElementById("modal-busca-grupo-tbody");
+    const countEl = document.getElementById("modal-busca-grupo-count");
+    if (!tbody) return;
+
+    let visiveis = 0;
+    const rows = tbody.querySelectorAll("tr");
+    rows.forEach(tr => {
+      const cod = (tr.getAttribute("data-cod") || "").toLowerCase();
+      const nome = (tr.getAttribute("data-nome") || "").toLowerCase();
+
+      if (!termoClean || cod.includes(termoClean) || nome.includes(termoClean)) {
+        tr.style.display = "";
+        visiveis++;
+      } else {
+        tr.style.display = "none";
+      }
+    });
+
+    if (countEl) {
+      countEl.textContent = `Exibindo ${visiveis} grupos`;
+    }
+  }
+
+  function selecionarGrupoSankhyaGrid(codgrupo, nomegrupo) {
+    document.getElementById("modal-input-codgrupo").value = codgrupo;
+    document.getElementById("modal-input-nomegrupo").value = nomegrupo || "";
+    fecharModalBuscaGrupoSankhya();
+  }
+
+  function aoDigitarCodigoGrupo(codVal) {
+    const codNum = parseInt(codVal, 10);
+    if (!codNum || isNaN(codNum)) {
+      document.getElementById("modal-input-nomegrupo").value = "";
+      return;
+    }
+
+    const encontrado = listaGruposSankhyaMemoria.find(g => g.codgrupo === codNum);
+    if (encontrado) {
+      selecionarGrupoSankhyaGrid(encontrado.codgrupo, encontrado.nomegrupo);
+    } else {
+      document.getElementById("modal-input-nomegrupo").value = "Grupo não encontrado";
+    }
+  }
+
+  // Lista de Usuários do Sankhya OM disponibilizada pelo backend
+  const listaUsuariosSankhyaMemoria = [
+    {% for u in usuarios_sankhya %}
+    {
+      codusu: {{ u.codusu }},
+      nomeusu: "{{ u.nomeusu }}",
+      nomevend: "{{ u.nomevend or '' }}",
+      nomegrupo: "{{ u.nomegrupo or '' }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
+
+  function abrirModalNovoUsuario() {
+    document.getElementById("modal-input-codusu").value = "";
+    document.getElementById("modal-input-nomeusu").value = "";
+    document.getElementById("modal-input-nomevend").value = "";
+    document.getElementById("modal-check-isadmin").checked = false;
+    document.getElementById("modal-novo-usuario").style.display = "flex";
+  }
+
+  function fecharModalUsuario() {
+    document.getElementById("modal-novo-usuario").style.display = "none";
+  }
+
+  // Modal de Pesquisa de Usuário Sankhya
+  function abrirModalBuscaUsuarioSankhya() {
+    const inputFiltro = document.getElementById("modal-busca-usuario-input");
+    if (inputFiltro) inputFiltro.value = "";
+    filtrarUsuariosSankhya("");
+    document.getElementById("modal-busca-usuario-sankhya").style.display = "flex";
+    setTimeout(() => {
+      if (inputFiltro) {
+        inputFiltro.focus();
+        inputFiltro.select();
+      }
+    }, 60);
+  }
+
+  function fecharModalBuscaUsuarioSankhya() {
+    document.getElementById("modal-busca-usuario-sankhya").style.display = "none";
+  }
+
+  function filtrarUsuariosSankhya(termo) {
+    const termoClean = (termo || "").trim().toLowerCase();
+    const tbody = document.getElementById("modal-busca-usuario-tbody");
+    const countEl = document.getElementById("modal-busca-usuario-count");
+    if (!tbody) return;
+
+    let visiveis = 0;
+    const rows = tbody.querySelectorAll("tr");
+    rows.forEach(tr => {
+      const cod = (tr.getAttribute("data-cod") || "").toLowerCase();
+      const login = (tr.getAttribute("data-login") || "").toLowerCase();
+      const vend = (tr.getAttribute("data-vend") || "").toLowerCase();
+      const grupo = (tr.getAttribute("data-grupo") || "").toLowerCase();
+
+      if (!termoClean || cod.includes(termoClean) || login.includes(termoClean) || vend.includes(termoClean) || grupo.includes(termoClean)) {
+        tr.style.display = "";
+        visiveis++;
+      } else {
+        tr.style.display = "none";
+      }
+    });
+
+    if (countEl) {
+      countEl.textContent = `Exibindo ${visiveis} usuários`;
+    }
+  }
+
+  function selecionarUsuarioSankhyaGrid(codusu, nomeusu, nomevend) {
+    document.getElementById("modal-input-codusu").value = codusu;
+    document.getElementById("modal-input-nomeusu").value = nomeusu || "";
+    document.getElementById("modal-input-nomevend").value = (nomevend && nomevend !== "-") ? nomevend : "";
+    fecharModalBuscaUsuarioSankhya();
+  }
+
+  function aoDigitarCodigoUsuario(codVal) {
+    const codNum = parseInt(codVal, 10);
+    if (!codNum || isNaN(codNum)) {
+      document.getElementById("modal-input-nomeusu").value = "";
+      document.getElementById("modal-input-nomevend").value = "";
+      return;
+    }
+
+    const encontrado = listaUsuariosSankhyaMemoria.find(u => u.codusu === codNum);
+    if (encontrado) {
+      selecionarUsuarioSankhyaGrid(encontrado.codusu, encontrado.nomeusu, encontrado.nomevend);
+    } else {
+      document.getElementById("modal-input-nomeusu").value = "Usuário não encontrado";
+      document.getElementById("modal-input-nomevend").value = "";
+    }
+  }
+
+  // Ações do CRUD de Grupos
+  function salvarNovoGrupo() {
+    const codgrupo = document.getElementById("modal-input-codgrupo").value;
+    const nomegrupo = document.getElementById("modal-input-nomegrupo").value;
+
+    if (!codgrupo) {
+      alert("Por favor, selecione ou informe o código do grupo.");
+      return;
+    }
+
+    fetch("/api/acessos/grupos/adicionar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ codgrupo: parseInt(codgrupo), nomegrupo: nomegrupo })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === "1") {
+        window.location.reload();
+      } else {
+        alert(data.mensagem || "Erro ao salvar grupo.");
+      }
+    })
+    .catch(err => alert("Erro ao conectar com o servidor."));
+  }
+
+  function alternarStatusGrupo(id) {
+    fetch("/api/acessos/grupos/alternar-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: id })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === "1") window.location.reload();
+      else alert(data.mensagem || "Erro ao alterar status.");
+    });
+  }
+
+  function excluirGrupo(id, nome) {
+    abrirModalConfirmarExclusao("grupo", id, nome);
+  }
+
+  // Ações do CRUD de Usuários
+  function salvarNovoUsuario() {
+    const codusu = document.getElementById("modal-input-codusu").value;
+    const nomeusu = document.getElementById("modal-input-nomeusu").value;
+    const nomevend = document.getElementById("modal-input-nomevend").value;
+    const isAdmin = document.getElementById("modal-check-isadmin").checked ? 1 : 0;
+
+    if (!codusu || !nomeusu) {
+      alert("Por favor, informe o código e login do usuário.");
+      return;
+    }
+
+    fetch("/api/acessos/usuarios/adicionar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        codusu: parseInt(codusu),
+        nomeusu: nomeusu,
+        nomevend: nomevend,
+        is_admin: isAdmin
+      })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === "1") {
+        window.location.reload();
+      } else {
+        alert(data.mensagem || "Erro ao salvar usuário.");
+      }
+    })
+    .catch(err => alert("Erro ao conectar com o servidor."));
+  }
+
+  function alternarStatusUsuario(id) {
+    fetch("/api/acessos/usuarios/alternar-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: id })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === "1") window.location.reload();
+      else alert(data.mensagem || "Erro ao alterar status.");
+    });
+  }
+
+  function alternarPerfilAdmin(id) {
+    fetch("/api/acessos/usuarios/alternar-admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: id })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === "1") window.location.reload();
+      else alert(data.mensagem || "Erro ao alterar perfil.");
+    });
+  }
+
+  function excluirUsuario(id, login) {
+    abrirModalConfirmarExclusao("usuario", id, login);
+  }
+
+  let sessaoParaDerrubar = null; // { sessionId, token, nomeUsuario, isSelf }
+
+  function aoClicarMatarSessao(el) {
+    const btn = el && el.closest ? (el.closest("button") || el) : el;
+    if (!btn) return;
+    const sessionId = btn.getAttribute("data-session-id");
+    const token = btn.getAttribute("data-session-token");
+    const nomeUsuario = btn.getAttribute("data-user-name") || "Usuário";
+    const isSelf = btn.getAttribute("data-is-self") === "true";
+    derrubarSessao(sessionId, token, nomeUsuario, isSelf);
+  }
+
+  function derrubarSessao(sessionId, token, nomeUsuario, isSelf) {
+    const isSelfBool = (isSelf === true || isSelf === "true");
+    sessaoParaDerrubar = { sessionId, token, nomeUsuario, isSelf: isSelfBool };
+
+    const headerTitleEl = document.getElementById("modal-derrubar-header-title");
+    const titleEl = document.getElementById("modal-derrubar-title");
+    const textEl = document.getElementById("modal-derrubar-text");
+    const alertBoxEl = document.getElementById("modal-derrubar-alert-box");
+    const btnConfirmar = document.getElementById("btn-executar-derrubar-sessao");
+
+    if (btnConfirmar) {
+      btnConfirmar.disabled = false;
+      btnConfirmar.innerHTML = `<i class="fa-solid fa-power-off" style="margin-right: 4px;"></i> Sim, Derrubar Sessão`;
+    }
+
+    if (isSelfBool) {
+      if (headerTitleEl) headerTitleEl.textContent = "Atenção: Encerrar Própria Sessão";
+      if (titleEl) titleEl.textContent = "Deseja encerrar a sua própria sessão?";
+      if (textEl) textEl.innerHTML = `Você está prestes a derrubar a <strong>sua própria sessão ativa</strong> conectada no OrderFlow.`;
+      if (alertBoxEl) alertBoxEl.innerHTML = `⚠️ Você será desconectado e redirecionado para a tela de login imediatamente.`;
+    } else {
+      if (headerTitleEl) headerTitleEl.textContent = "Encerrar Sessão Ativa";
+      if (titleEl) titleEl.textContent = `Deseja derrubar a sessão deste usuário?`;
+      if (textEl) textEl.innerHTML = `A conexão do usuário <strong style="color: #ef4444;">${nomeUsuario}</strong> será finalizada e a licença correspondente será liberada no tenant.`;
+      if (alertBoxEl) alertBoxEl.innerHTML = `⚠️ O usuário perderá o acesso imediato e precisará efetuar login novamente se desejar retornar.`;
+    }
+
+    const modal = document.getElementById("modal-confirmar-derrubar-sessao");
+    if (modal) modal.style.display = "flex";
+  }
+
+  function fecharModalDerrubarSessao() {
+    sessaoParaDerrubar = null;
+    const m = document.getElementById("modal-confirmar-derrubar-sessao");
+    if (m) m.style.display = "none";
+  }
+
+  function confirmarExecucaoDerrubarSessao() {
+    if (!sessaoParaDerrubar) return;
+
+    const { sessionId, token, isSelf } = sessaoParaDerrubar;
+    const btnSim = document.getElementById("btn-executar-derrubar-sessao");
+    const originalContent = btnSim ? btnSim.innerHTML : "Sim, Derrubar Sessão";
+    if (btnSim) {
+      btnSim.disabled = true;
+      btnSim.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i> Encerrando...`;
+    }
+
+    fetch("/api/acessos/sessoes/encerrar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId, session_token: token })
+    })
+    .then(r => r.json())
+    .then(data => {
+      fecharModalDerrubarSessao();
+      if (data && data.status === "1") {
+        if (isSelf) {
+          window.location.href = "/login?msg=" + encodeURIComponent("Sua sessão foi encerrada.");
+        } else {
+          // Remove a linha imediatamente da tabela para retorno visual instantâneo
+          const tr = document.getElementById("linha-sessao-" + sessionId);
+          if (tr) tr.remove();
+          // Recarrega forçando atualização
+          window.location.reload();
+        }
+      } else {
+        alert(data.mensagem || "Erro ao encerrar sessão.");
+        if (btnSim) {
+          btnSim.disabled = false;
+          btnSim.innerHTML = originalContent;
+        }
+      }
+    })
+    .catch(err => {
+      fecharModalDerrubarSessao();
+      const tr = document.getElementById("linha-sessao-" + sessionId);
+      if (tr) tr.remove();
+      window.location.reload();
+    });
+  }
+</script>
+{% endblock %}

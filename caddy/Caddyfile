@@ -1,0 +1,11 @@
+admin.dataevo.com.br {
+    reverse_proxy orderflow-admin:5005
+}
+
+autogiro.dataevo.com.br {
+    reverse_proxy orderflow-app:6000
+}
+
+autogiro-base.dataevo.com.br, base.autogiro.dataevo.com.br {
+    reverse_proxy orderflow-base:6000
+}

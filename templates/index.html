@@ -1,0 +1,710 @@
+{% extends "base.html" %}
+
+{% block titulo_pagina %}Painel Principal - Início{% endblock %}
+
+{% block conteudo %}
+
+{% if boas_vindas %}
+<div id="banner-boas-vindas" style="
+  position: fixed; top: 16px; right: 16px; z-index: 9999999;
+  background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+  color: #ffffff; border-radius: 8px; padding: 14px 18px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25); max-width: 340px;
+  display: flex; align-items: center; gap: 12px;
+  animation: slideInBanner 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-family: inherit;
+">
+  <div style="font-size: 28px; flex-shrink: 0;">👋</div>
+  <div>
+    <div style="font-weight: 800; font-size: 13px; margin-bottom: 2px;">Bem-vindo ao OrderFlow!</div>
+    <div style="font-size: 11.5px; opacity: 0.9;">Olá, <strong>{{ boas_vindas }}</strong>. Bom trabalho!</div>
+  </div>
+  <button onclick="document.getElementById('banner-boas-vindas').style.display='none'"
+    style="background: none; border: none; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 16px; padding: 0; margin-left: 4px; flex-shrink: 0; line-height: 1;">✕</button>
+</div>
+<style>
+@keyframes slideInBanner {
+  from { opacity: 0; transform: translateX(60px) scale(0.92); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+</style>
+<script>
+  // Auto-fecha o banner após 5 segundos
+  setTimeout(function () {
+    const banner = document.getElementById("banner-boas-vindas");
+    if (banner) {
+      banner.style.transition = "opacity 0.5s ease, transform 0.5s ease";
+      banner.style.opacity = "0";
+      banner.style.transform = "translateX(60px)";
+      setTimeout(() => banner.style.display = "none", 500);
+    }
+  }, 5000);
+</script>
+{% endif %}
+
+<div class="dashboard-canvas" id="dashboard-canvas-area" style="position: relative; width: 100%; min-height: calc(100vh - 65px); background: #f8fafc; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column;">
+  
+  <!-- Barra de Ferramentas Superior do Dashboard -->
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #ffffff; border-bottom: 1px solid #cbd5e1; flex-shrink: 0; z-index: 5;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 16px;">📊</span>
+      <span style="font-size: 13px; font-weight: 700; color: #0f172a;">Painel de Gestão & Indicadores</span>
+      <span style="font-size: 11px; color: #64748b;">(Auto Giro Distribuidora)</span>
+    </div>
+
+    <!-- Controles de Quadrantes e Posição do Card -->
+    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+      <span style="font-size: 10.5px; font-weight: 700; color: #475569; margin-right: 2px;">Encaixar Quadrante:</span>
+      <button type="button" class="sankhya-tool-btn btn-quadrante active" onclick="encaixarNoQuadrante('top-left')" title="Encaixar no Quadrante Superior Esquerdo" style="height: 26px; padding: 0 8px; font-size: 10.5px;">
+        <i class="fa-solid fa-table-cells-large"></i> Top-Esq-Sup
+      </button>
+      <button type="button" class="sankhya-tool-btn btn-quadrante" onclick="encaixarNoQuadrante('bottom-left')" title="Encaixar no Quadrante Inferior Esquerdo" style="height: 26px; padding: 0 8px; font-size: 10.5px;">
+        <i class="fa-solid fa-table-cells-large"></i> Top-Esq-Inf
+      </button>
+      <button type="button" class="sankhya-tool-btn btn-quadrante" onclick="encaixarNoQuadrante('top-right')" title="Encaixar no Quadrante Superior Direito" style="height: 26px; padding: 0 8px; font-size: 10.5px;">
+        <i class="fa-solid fa-table-cells-large"></i> Top-Dir-Sup
+      </button>
+      <button type="button" class="sankhya-tool-btn btn-quadrante" onclick="encaixarNoQuadrante('bottom-right')" title="Encaixar no Quadrante Inferior Direito" style="height: 26px; padding: 0 8px; font-size: 10.5px;">
+        <i class="fa-solid fa-table-cells-large"></i> Top-Dir-Inf
+      </button>
+      <button type="button" class="sankhya-tool-btn btn-quadrante" onclick="encaixarNoQuadrante('full')" title="Expandir no Quadrante Completo" style="height: 26px; padding: 0 8px; font-size: 10.5px;">
+        <i class="fa-solid fa-expand"></i> Expandido
+      </button>
+
+      <span style="border-left: 1px solid #cbd5e1; height: 18px; margin: 0 4px;"></span>
+
+      <button type="button" class="sankhya-tool-btn" onclick="carregarAndamentoComissoes();" title="Recarregar Indicadores" style="height: 26px; padding: 0 10px; font-size: 11px; display: inline-flex; align-items: center; gap: 5px; color: #00A859; font-weight: 700;">
+        <i class="fa-solid fa-arrows-rotate"></i>
+        <span>Atualizar</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Grid de Quadrantes de Fundo (Guias visuais onde os cards podem se encaixar) -->
+  <div id="grid-quadrantes-fundo" style="position: absolute; inset: 48px 0 0 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px; padding: 12px; pointer-events: none; box-sizing: border-box; z-index: 1;">
+    <div class="slot-quadrante" id="slot-top-left" style="border: 2px dashed rgba(148, 163, 184, 0.35); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px; font-weight: 600;">
+      <span>Top-Esq-Sup (Superior Esquerdo)</span>
+    </div>
+    <div class="slot-quadrante" id="slot-top-right" style="border: 2px dashed rgba(148, 163, 184, 0.35); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px; font-weight: 600;">
+      <span>Top-Dir-Sup (Superior Direito)</span>
+    </div>
+    <div class="slot-quadrante" id="slot-bottom-left" style="border: 2px dashed rgba(148, 163, 184, 0.35); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px; font-weight: 600;">
+      <span>Top-Esq-Inf (Inferior Esquerdo)</span>
+    </div>
+    <div class="slot-quadrante" id="slot-bottom-right" style="border: 2px dashed rgba(148, 163, 184, 0.35); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px; font-weight: 600;">
+      <span>Top-Dir-Inf (Inferior Direito)</span>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- CARD DE ANDAMENTO DAS COMISSÕES (FIXO NO CANTO SUPERIOR ESQUERDO)        -->
+  <!-- ========================================================================= -->
+  <div id="card-comissoes-flutuante" class="quadrante-card snk-dashboard-card" style="
+    position: absolute;
+    top: 60px;
+    left: 20px;
+    width: 680px;
+    max-width: calc(100% - 40px);
+    height: 440px;
+    z-index: 10;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.08);
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+  ">
+
+    <!-- Cabeçalho estilo Sankhya OM (Título em caixa alta suave, pin de arraste central e menu 3 pontos) -->
+    <div id="card-comissoes-header" class="sankhya-card-header" style="
+      padding: 8px 14px;
+      background: #ffffff;
+      border-bottom: 1px solid #ebeef5;
+      color: #303133;
+      cursor: grab;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      height: 38px;
+    ">
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 11.5px; color: #374151; letter-spacing: 0.3px;">
+        <i class="fa-solid fa-arrows-up-down-left-right" style="color: #9ca3af; font-size: 10px;" title="Clique e arraste para posicionar no dashboard"></i>
+        <span>ANDAMENTO DAS COMISSÕES</span>
+        <span style="font-weight: 500; color: #6b7280; font-size: 11px;">(<span id="comissoes-vendedor-label">Vendedor Logado</span>)</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span id="badge-comissoes-atingido" style="background: #ecfdf5; color: #059669; font-size: 10.5px; padding: 2px 8px; border-radius: 12px; font-weight: 700; border: 1px solid #a7f3d0;">
+          Meta: R$ 0,00
+        </span>
+        <button type="button" class="sankhya-tool-btn" onclick="minimizarCardComissoes()" title="Recolher / Expandir" style="height: 22px; width: 22px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; color: #6b7280; border: none; background: transparent;">
+          <i class="fa-solid fa-ellipsis-vertical"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Corpo do Card de Comissões -->
+    <div id="card-comissoes-body-wrapper" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+      <!-- Filtros e Resumo do Vendedor -->
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 12px; background: #f0fdf4; border-bottom: 1px solid #bbf7d0; flex-wrap: wrap; flex-shrink: 0;">
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+          <label style="font-weight: 700; color: #166534;">Período:</label>
+          <input type="date" id="filtro-comissoes-dt-ini" class="sankhya-input" style="height: 24px; font-size: 11px; padding: 0 6px; width: 125px;">
+          <span style="color: #64748b;">a</span>
+          <input type="date" id="filtro-comissoes-dt-fim" class="sankhya-input" style="height: 24px; font-size: 11px; padding: 0 6px; width: 125px;">
+          <button type="button" class="sankhya-tool-btn" onclick="carregarAndamentoComissoes()" style="height: 24px; padding: 0 10px; font-size: 11px; font-weight: 700; background: #059669; color: #ffffff; border-color: #047857;">
+            Filtrar
+          </button>
+        </div>
+
+        <div id="comissoes-resumo-rapido" style="font-size: 11px; color: #166534; display: flex; align-items: center; gap: 10px;">
+          <span>Alcançado: <strong id="resumo-comissoes-alcancado" style="color: #047857;">R$ 0,00</strong></span>
+          <span style="border-left: 1px solid #86efac; height: 14px;"></span>
+          <span>% Real: <strong id="resumo-comissoes-percreal" style="color: #047857;">0,00%</strong></span>
+        </div>
+      </div>
+
+      <!-- Tabela de Faixas de Comissões e Metas -->
+      <div id="scroll-container-comissoes" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <table class="snk-table" id="tabela-andamento-comissoes" style="width: 100%; min-width: 780px; table-layout: fixed; font-size: 11px; border-collapse: separate; border-spacing: 0;">
+          <colgroup>
+            <col style="width: 80px;">  <!-- Até % -->
+            <col style="width: 115px;"> <!-- Faixa -->
+            <col style="width: 85px;">  <!-- % Comis. -->
+            <col style="width: 115px;"> <!-- Meta -->
+            <col style="width: 120px;"> <!-- Dif. Próx. Faixa -->
+            <col style="width: 130px;"> <!-- Vlr. Comis. -->
+            <col style="width: 115px;"> <!-- Média Dia Ideal -->
+          </colgroup>
+          <thead style="position: sticky; top: 0; background: #0f172a; color: #f8fafc; z-index: 20; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+            <tr>
+              <th style="text-align: right;">Até %</th>
+              <th style="text-align: right;">Faixa</th>
+              <th style="text-align: right;">% Comis.</th>
+              <th style="text-align: right;">Meta</th>
+              <th style="text-align: right;">Dif. Próx. Faixa</th>
+              <th style="text-align: right;">Vlr. Comis.</th>
+              <th style="text-align: right;">Média Dia Ideal</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-andamento-comissoes">
+            <tr>
+              <td colspan="7" class="snk-table-empty" style="text-align: center; padding: 35px; color: #64748b;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 18px; color: #059669; margin-bottom: 8px; display: block;"></i>
+                Carregando andamento das comissões...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ESTILOS E COMPORTAMENTO DRAGGABLE DO CARD SUSPENSO -->
+<style>
+  [data-theme="dark"] #dashboard-canvas-area {
+    background: #0b1120 !important;
+  }
+  [data-theme="dark"] #card-faturamento-flutuante {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+  [data-theme="dark"] #tfoot-faturamento-geral {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    border-top-color: #334155 !important;
+  }
+  .snk-floating-card.is-dragging {
+    opacity: 0.95;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45) !important;
+  }
+  .linha-vendedor-hover:hover {
+    background-color: rgba(2, 132, 199, 0.08) !important;
+  }
+  [data-theme="dark"] .linha-vendedor-hover:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+  }
+
+  [data-theme="dark"] #card-comissoes-flutuante {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+  [data-theme="dark"] #card-comissoes-body-wrapper div:first-child {
+    background: #0f291e !important;
+    border-color: #14532d !important;
+  }
+  .snk-dashboard-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, top 0.2s cubic-bezier(0.25, 1, 0.5, 1), left 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  .snk-dashboard-card.is-dragging {
+    opacity: 0.96;
+    transform: scale(1.015);
+    box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.35), 0 6px 16px rgba(0, 0, 0, 0.18) !important;
+    z-index: 9999 !important;
+    transition: none !important;
+  }
+  .slot-quadrante {
+    transition: all 0.2s ease;
+  }
+  .slot-quadrante.slot-target-hover {
+    background: rgba(0, 168, 89, 0.08) !important;
+    border-color: #00A859 !important;
+    border-style: solid !important;
+  }
+
+  .linha-comissao-hover:hover {
+    filter: brightness(0.96);
+  }
+  [data-theme="dark"] .linha-comissao-hover:hover {
+    filter: brightness(1.15);
+  }
+
+  /* Responsividade Mobile */
+  @media (max-width: 768px), (max-device-width: 768px) {
+    #card-comissoes-flutuante {
+      position: relative !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: auto !important;
+      width: 100% !important;
+      height: calc(100vh - 120px) !important;
+      max-width: 100% !important;
+      border-radius: 0 !important;
+      margin-bottom: 15px !important;
+    }
+    #card-comissoes-header {
+      cursor: default !important;
+    }
+  }
+</style>
+
+<script>
+  let cardFaturamentoDados = [];
+
+  // ==========================================
+  // CARREGAMENTO DOS DADOS VIA API SANKHYA
+  // ==========================================
+  function formatarMoedaBR(valor) {
+    return (Number(valor) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  function formatarNumeroBR(valor, casas = 2) {
+    return (Number(valor) || 0).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
+  }
+
+  function carregarFaturamentoGeral() {
+    const dtIni = document.getElementById("filtro-card-dt-ini").value;
+    const dtFim = document.getElementById("filtro-card-dt-fim").value;
+    const tbody = document.getElementById("tbody-faturamento-geral");
+
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="10" style="text-align: center; padding: 30px; color: #64748b;">
+          <i class="fa-solid fa-spinner fa-spin" style="font-size: 18px; color: #0284c7; margin-bottom: 8px; display: block;"></i>
+          Atualizando faturamento geral...
+        </td>
+      </tr>
+    `;
+
+    let url = "/api/dashboard/faturamento-geral";
+    const params = [];
+    if (dtIni) params.push("dt_ini=" + encodeURIComponent(dtIni));
+    if (dtFim) params.push("dt_fim=" + encodeURIComponent(dtFim));
+    if (params.length > 0) url += "?" + params.join("&");
+
+    fetch(url)
+      .then(res => res.json())
+      .then(res => {
+        if (res.status === "1" && res.dados) {
+          cardFaturamentoDados = res.dados.linhas || [];
+          renderizarTabelaFaturamento(cardFaturamentoDados, res.dados.totais);
+        } else {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="10" style="text-align: center; padding: 25px; color: #ef4444;">
+                Falha ao carregar dados: ${res.mensagem || 'Erro desconhecido'}
+              </td>
+            </tr>
+          `;
+        }
+      })
+      .catch(err => {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="10" style="text-align: center; padding: 25px; color: #ef4444;">
+              Erro de comunicação com o servidor Sankhya.
+            </td>
+          </tr>
+        `;
+      });
+  }
+
+  function renderizarTabelaFaturamento(linhas, totais) {
+    const tbody = document.getElementById("tbody-faturamento-geral");
+    const badge = document.getElementById("badge-total-vendedores");
+
+    if (badge) badge.textContent = `${linhas.length} vendedores`;
+
+    if (!linhas || linhas.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="11" style="text-align: center; padding: 25px; color: #64748b;">
+            Nenhum registro encontrado no período selecionado.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    let html = "";
+    linhas.forEach(item => {
+      html += `
+        <tr class="linha-vendedor-hover" style="border-bottom: 1px solid rgba(148, 163, 184, 0.2);">
+          <td style="text-align: center; font-weight: 700; color: #0284c7;">#${item.codvend}</td>
+          <td style="font-weight: 600; color: #0f172a;">${item.apelido || '-'}</td>
+          <td style="color: #475569; font-weight: 500;">
+            <span class="snk-badge-empresa" style="background: rgba(2, 132, 199, 0.08); color: #0284c7; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">
+              ${item.nomefantasia || '-'}
+            </span>
+          </td>
+          <td style="text-align: right; font-weight: 700; color: #00A859;">${formatarMoedaBR(item.total)}</td>
+          <td style="text-align: right; font-weight: 600;">${formatarNumeroBR(item.perc_val)} %</td>
+          <td style="text-align: right; font-weight: 600;">${formatarNumeroBR(item.qtd_neg, 0)}</td>
+          <td style="text-align: right; font-weight: 600;">${formatarNumeroBR(item.perc_qtd)} %</td>
+          <td style="text-align: right; color: #0284c7; font-weight: 600;">${formatarMoedaBR(item.venda_promocao)}</td>
+          <td style="text-align: right; font-weight: 600;">${formatarMoedaBR(item.venda_sem_promocao)}</td>
+          <td style="text-align: right;">${formatarNumeroBR(item.perc_sem_promocao)} %</td>
+          <td style="text-align: right; color: #e11d48; font-weight: 600;">${formatarNumeroBR(item.perc_promocao)} %</td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = html;
+
+    // Atualiza Totais
+    if (totais) {
+      document.getElementById("tot-valor").textContent = formatarMoedaBR(totais.total);
+      document.getElementById("tot-perc-valor").textContent = formatarNumeroBR(totais.perc_val) + " %";
+      document.getElementById("tot-qtd").textContent = formatarNumeroBR(totais.qtd_neg, 0);
+      document.getElementById("tot-perc-qtd").textContent = formatarNumeroBR(totais.perc_qtd) + " %";
+      document.getElementById("tot-venda-promocao").textContent = formatarMoedaBR(totais.venda_promocao);
+      document.getElementById("tot-venda-sem-promocao").textContent = formatarMoedaBR(totais.venda_sem_promocao);
+      document.getElementById("tot-perc-sem-promocao").textContent = formatarNumeroBR(totais.perc_sem_promocao) + " %";
+      document.getElementById("tot-perc-promocao").textContent = formatarNumeroBR(totais.perc_promocao) + " %";
+    }
+  }
+
+  function minimizarCardComissoes() {
+    const wrapper = document.getElementById("card-comissoes-body-wrapper");
+    const card = document.getElementById("card-comissoes-flutuante");
+    const icon = document.getElementById("btn-minimizar-comissoes-icon");
+
+    if (wrapper.style.display === "none") {
+      wrapper.style.display = "flex";
+      card.style.height = "460px";
+      icon.textContent = "−";
+    } else {
+      wrapper.style.display = "none";
+      card.style.height = "auto";
+      icon.textContent = "+";
+    }
+  }
+
+  const STORAGE_KEY_COMISSOES_QUADRANTE = "orderflow_dashboard_comissoes_quadrante";
+  let quadranteAtual = "top-left";
+
+  function salvarQuadranteComissoes(quadrante) {
+    try {
+      localStorage.setItem(STORAGE_KEY_COMISSOES_QUADRANTE, quadrante);
+    } catch (e) {}
+  }
+
+  function encaixarNoQuadrante(tipo, salvar = true) {
+    const card = document.getElementById("card-comissoes-flutuante");
+    const canvas = document.getElementById("dashboard-canvas-area");
+    if (!card || !canvas || window.innerWidth <= 768) return;
+
+    quadranteAtual = tipo;
+    const canvasWidth = canvas.clientWidth;
+    const canvasHeight = canvas.clientHeight;
+    const topBarHeight = 48;
+    const padding = 12;
+    const meiaLargura = Math.floor((canvasWidth - (padding * 3)) / 2);
+    const meiaAltura = Math.max(380, Math.floor((canvasHeight - topBarHeight - (padding * 3)) / 2));
+
+    // Destaca botão ativo
+    document.querySelectorAll(".btn-quadrante").forEach(b => b.classList.remove("active"));
+    const btnAtivo = Array.from(document.querySelectorAll(".btn-quadrante")).find(b => b.getAttribute("onclick") && b.getAttribute("onclick").includes(tipo));
+    if (btnAtivo) btnAtivo.classList.add("active");
+
+    if (tipo === "top-left") {
+      card.style.left = padding + "px";
+      card.style.top = (topBarHeight + padding) + "px";
+      card.style.width = meiaLargura + "px";
+      card.style.maxWidth = "none";
+      card.style.height = meiaAltura + "px";
+    } else if (tipo === "top-right") {
+      card.style.left = (meiaLargura + (padding * 2)) + "px";
+      card.style.top = (topBarHeight + padding) + "px";
+      card.style.width = meiaLargura + "px";
+      card.style.maxWidth = "none";
+      card.style.height = meiaAltura + "px";
+    } else if (tipo === "bottom-left") {
+      card.style.left = padding + "px";
+      card.style.top = (topBarHeight + meiaAltura + (padding * 2)) + "px";
+      card.style.width = meiaLargura + "px";
+      card.style.maxWidth = "none";
+      card.style.height = meiaAltura + "px";
+    } else if (tipo === "bottom-right") {
+      card.style.left = (meiaLargura + (padding * 2)) + "px";
+      card.style.top = (topBarHeight + meiaAltura + (padding * 2)) + "px";
+      card.style.width = meiaLargura + "px";
+      card.style.maxWidth = "none";
+      card.style.height = meiaAltura + "px";
+    } else if (tipo === "center") {
+      const cardWidth = Math.min(840, canvasWidth - (padding * 2));
+      const left = Math.max(padding, (canvasWidth - cardWidth) / 2);
+      card.style.left = left + "px";
+      card.style.top = (topBarHeight + padding) + "px";
+      card.style.width = cardWidth + "px";
+      card.style.maxWidth = "none";
+      card.style.height = (canvasHeight - topBarHeight - (padding * 2)) + "px";
+    } else if (tipo === "full") {
+      card.style.left = padding + "px";
+      card.style.top = (topBarHeight + padding) + "px";
+      card.style.width = (canvasWidth - (padding * 2)) + "px";
+      card.style.maxWidth = "none";
+      card.style.height = (canvasHeight - topBarHeight - (padding * 2)) + "px";
+    }
+
+    if (salvar) {
+      salvarQuadranteComissoes(tipo);
+    }
+  }
+
+  // Comportamento Drag and Snap estilo Sankhya OM
+  (function initSankhyaDraggableCard() {
+    const card = document.getElementById("card-comissoes-flutuante");
+    const header = document.getElementById("card-comissoes-header");
+    const canvas = document.getElementById("dashboard-canvas-area");
+    if (!card || !header || !canvas) return;
+
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let initialLeft = 0, initialTop = 0;
+
+    header.addEventListener("mousedown", function (e) {
+      if (e.target.closest("button") || e.target.closest("input")) return;
+      if (window.innerWidth <= 768) return;
+
+      isDragging = true;
+      card.classList.add("is-dragging");
+      header.style.cursor = "grabbing";
+
+      startX = e.clientX;
+      startY = e.clientY;
+
+      const rect = card.getBoundingClientRect();
+      const parentRect = canvas.getBoundingClientRect();
+
+      initialLeft = rect.left - parentRect.left;
+      initialTop = rect.top - parentRect.top;
+
+      e.preventDefault();
+    });
+
+    document.addEventListener("mousemove", function (e) {
+      if (!isDragging) return;
+
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+
+      let newLeft = Math.max(10, initialLeft + dx);
+      let newTop = Math.max(50, initialTop + dy);
+
+      card.style.left = newLeft + "px";
+      card.style.top = newTop + "px";
+
+      // Realça o quadrante sob o cursor estilo Sankhya
+      destacarSlotMaisProximo(e.clientX, e.clientY);
+    });
+
+    document.addEventListener("mouseup", function (e) {
+      if (isDragging) {
+        isDragging = false;
+        card.classList.remove("is-dragging");
+        header.style.cursor = "grab";
+
+        // Remove highlights dos slots
+        document.querySelectorAll(".slot-quadrante").forEach(s => s.classList.remove("slot-target-hover"));
+
+        // Encaixa automaticamente no quadrante mais próximo
+        const quadranteAlvo = calcularQuadranteMaisProximo(e.clientX, e.clientY);
+        encaixarNoQuadrante(quadranteAlvo, true);
+      }
+    });
+
+    function destacarSlotMaisProximo(clientX, clientY) {
+      const quad = calcularQuadranteMaisProximo(clientX, clientY);
+      document.querySelectorAll(".slot-quadrante").forEach(s => s.classList.remove("slot-target-hover"));
+      const slot = document.getElementById("slot-" + quad);
+      if (slot) slot.classList.add("slot-target-hover");
+    }
+
+    function calcularQuadranteMaisProximo(clientX, clientY) {
+      const parentRect = canvas.getBoundingClientRect();
+      const relX = clientX - parentRect.left;
+      const relY = clientY - parentRect.top;
+
+      const isEsquerda = relX < (canvas.clientWidth / 2);
+      const isSuperior = relY < (canvas.clientHeight / 2);
+
+      if (isEsquerda && isSuperior) return "top-left";
+      if (!isEsquerda && isSuperior) return "top-right";
+      if (isEsquerda && !isSuperior) return "bottom-left";
+      return "bottom-right";
+    }
+  })();
+
+  // ==========================================
+  // CARREGAMENTO E RENDERIZAÇÃO DO CARD DE COMISSÕES (FIXO NO CANTO SUPERIOR ESQUERDO)
+  // ==========================================
+  function carregarAndamentoComissoes() {
+    const dtIni = document.getElementById("filtro-comissoes-dt-ini").value;
+    const dtFim = document.getElementById("filtro-comissoes-dt-fim").value;
+    const tbody = document.getElementById("tbody-andamento-comissoes");
+
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; padding: 30px; color: #64748b;">
+          <i class="fa-solid fa-spinner fa-spin" style="font-size: 18px; color: #059669; margin-bottom: 8px; display: block;"></i>
+          Carregando andamento das comissões...
+        </td>
+      </tr>
+    `;
+
+    let url = "/api/dashboard/andamento-comissoes";
+    const params = [];
+    if (dtIni) params.push("dt_ini=" + encodeURIComponent(dtIni));
+    if (dtFim) params.push("dt_fim=" + encodeURIComponent(dtFim));
+    if (params.length > 0) url += "?" + params.join("&");
+
+    fetch(url)
+      .then(res => res.json())
+      .then(res => {
+        if (res.status === "1" && res.dados) {
+          renderizarTabelaComissoes(res.dados.faixas || [], res.dados.info || {}, res.apelido || "");
+        } else {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 25px; color: #ef4444;">
+                ${res.mensagem || 'Falha ao carregar comissões.'}
+              </td>
+            </tr>
+          `;
+        }
+      })
+      .catch(err => {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 25px; color: #ef4444;">
+              Erro de comunicação com o servidor Sankhya.
+            </td>
+          </tr>
+        `;
+      });
+  }
+
+  function renderizarTabelaComissoes(faixas, info, apelido) {
+    const tbody = document.getElementById("tbody-andamento-comissoes");
+    const labelVend = document.getElementById("comissoes-vendedor-label");
+    const badgeMeta = document.getElementById("badge-comissoes-atingido");
+    const resAlcancado = document.getElementById("resumo-comissoes-alcancado");
+    const resPercReal = document.getElementById("resumo-comissoes-percreal");
+
+    const nomeVend = info.apelido || apelido || (info.codvend ? `#${info.codvend}` : "Vendedor");
+    if (labelVend) labelVend.textContent = nomeVend;
+
+    if (badgeMeta) {
+      badgeMeta.textContent = `Meta: ${formatarMoedaBR(info.prevrec)}`;
+    }
+    if (resAlcancado) {
+      resAlcancado.textContent = formatarMoedaBR(info.alcancado);
+    }
+    if (resPercReal) {
+      resPercReal.textContent = formatarNumeroBR(info.percreal) + " %";
+    }
+
+    if (!faixas || faixas.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 25px; color: #64748b;">
+            Nenhuma faixa de comissão/meta cadastrada para o período.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    let html = "";
+    faixas.forEach(item => {
+      const isPaleGreen = (item.bkcolor && item.bkcolor.toUpperCase() === "PALEGREEN") || item.ativo;
+      const isTomato = item.bkcolor && item.bkcolor.toUpperCase() === "TOMATO";
+
+      let trBg = "";
+      let trBorder = "border-bottom: 1px solid rgba(148, 163, 184, 0.15);";
+      let statusIcon = "";
+
+      if (isPaleGreen) {
+        trBg = "background-color: #86efac; color: #064e3b; font-weight: 700;";
+        statusIcon = `<i class="fa-solid fa-arrow-right-long" style="margin-right: 5px; color: #047857;"></i>`;
+      } else if (isTomato) {
+        trBg = "background-color: #fee2e2; color: #991b1b;";
+      }
+
+      html += `
+        <tr class="linha-comissao-hover" style="${trBg} ${trBorder}">
+          <td style="text-align: right; padding: 6px 10px;">${formatarNumeroBR(item.ate)} %</td>
+          <td style="text-align: right; padding: 6px 10px; font-weight: 600;">${formatarMoedaBR(item.faixa)}</td>
+          <td style="text-align: right; padding: 6px 10px;">${formatarNumeroBR(item.perc)} %</td>
+          <td style="text-align: right; padding: 6px 10px; color: #475569;">${formatarMoedaBR(item.prevrec)}</td>
+          <td style="text-align: right; padding: 6px 10px; font-weight: 600;">${formatarMoedaBR(item.difproxfaixa)}</td>
+          <td style="text-align: right; padding: 6px 10px; font-weight: 800; font-size: 11.5px; ${isPaleGreen ? 'color: #064e3b;' : 'color: #047857;'}">
+            ${statusIcon}${formatarMoedaBR(item.comissao)}
+          </td>
+          <td style="text-align: right; padding: 6px 10px; font-weight: 600;">${formatarMoedaBR(item.mediadiaideal)}</td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = html;
+  }
+
+  // Inicializa datas do período (primeiro dia do mês até hoje) e carrega dados
+  document.addEventListener("DOMContentLoaded", function () {
+    const agora = new Date();
+    const ano = agora.getFullYear();
+    const mes = String(agora.getMonth() + 1).padStart(2, "0");
+    const dia = String(agora.getDate()).padStart(2, "0");
+
+    const dtIniPadrao = `${ano}-${mes}-01`;
+    const dtFimPadrao = `${ano}-${mes}-${dia}`;
+
+    const inputComIni = document.getElementById("filtro-comissoes-dt-ini");
+    const inputComFim = document.getElementById("filtro-comissoes-dt-fim");
+    if (inputComIni) inputComIni.value = dtIniPadrao;
+    if (inputComFim) inputComFim.value = dtFimPadrao;
+
+    const quadSalvo = localStorage.getItem(STORAGE_KEY_COMISSOES_QUADRANTE) || "top-left";
+    encaixarNoQuadrante(quadSalvo, false);
+    carregarAndamentoComissoes();
+  });
+</script>
+{% endblock %}

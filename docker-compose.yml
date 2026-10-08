@@ -1,0 +1,75 @@
+services:
+  # -------------------------------------------------------------------------
+  # 1. PAINEL ADMINISTRATIVO (Gestão Central de Licenças e Multi-Tenant)
+  # -------------------------------------------------------------------------
+  orderflow-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile.admin
+    container_name: orderflow-admin
+    restart: unless-stopped
+    ports:
+      - "5005:5005"
+    env_file:
+      - .env
+    volumes:
+      - ./admin_panel:/app/admin_panel
+      - .:/opt/orderflow
+      - /opt/orderflow_releases:/opt/orderflow_releases
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - orderflow-net
+
+  # -------------------------------------------------------------------------
+  # 2. APLICAÇÃO ONLINE - TESTE / PRODUÇÃO (Porta 6010 / https://autogiro.dataevo.com.br)
+  # Roda a versão estável/homologada de forma isolada, sem receber edits ao vivo da Base.
+  # -------------------------------------------------------------------------
+  orderflow-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: orderflow-app
+    restart: unless-stopped
+    ports:
+      - "${PORT:-6010}:6000"
+    env_file:
+      - .env
+    environment:
+      # Comunicação interna via rede Docker (aponta direto para o serviço admin)
+      - ADMIN_PANEL_URL=http://orderflow-admin:5005
+    volumes:
+      - /opt/orderflow_releases/autogiro_teste:/app
+      - ./admin_panel:/app/admin_panel
+    depends_on:
+      - orderflow-admin
+    networks:
+      - orderflow-net
+
+  # -------------------------------------------------------------------------
+  # 3. AMBIENTE BASE / DESENVOLVIMENTO (Porta 5010)
+  # -------------------------------------------------------------------------
+  orderflow-base:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: orderflow-base
+    restart: unless-stopped
+    ports:
+      - "5010:6000"
+    env_file:
+      - .env
+    environment:
+      - TENANT_ID=${TENANT_ID:-autogiro_base}
+      - TENANT_NAME=${TENANT_NAME:-Auto Giro (Base)}
+      - PORT=5010
+      - ADMIN_PANEL_URL=http://orderflow-admin:5005
+    volumes:
+      - .:/app
+    depends_on:
+      - orderflow-admin
+    networks:
+      - orderflow-net
+
+networks:
+  orderflow-net:
+    driver: bridge

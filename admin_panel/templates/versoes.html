@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Versões & Releases — OrderFlow Admin</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-body: #0b0f19;
+            --bg-sidebar: #111827;
+            --bg-card: #1f2937;
+            --bg-card-hover: #374151;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --border-color: #374151;
+            --sidebar-width: 250px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; }
+
+        /* Barra Lateral (Sidebar) */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 1.5rem 1.25rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .sidebar-brand span { color: var(--text-main); }
+
+        .sidebar-menu {
+            padding: 1.25rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+            flex: 1;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9375rem;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-link:hover {
+            background-color: var(--bg-card-hover);
+            color: var(--text-main);
+        }
+
+        .sidebar-link.active {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .sidebar-submenu {
+            margin-left: 1.25rem;
+            border-left: 2px solid rgba(255, 255, 255, 0.08);
+            padding-left: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            margin-top: 0.25rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .sidebar-sublink {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.5rem 0.75rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-sublink:hover {
+            background-color: var(--bg-card-hover);
+            color: var(--text-main);
+        }
+
+        .sidebar-sublink.active {
+            background-color: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            font-weight: 600;
+        }
+
+        .sidebar-footer {
+            padding: 1.25rem 1rem;
+            border-top: 1px solid var(--border-color);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .user-details { font-size: 0.8125rem; }
+        .user-name { font-weight: 600; color: var(--text-main); display: block; }
+        .user-role { color: var(--text-muted); font-size: 0.75rem; }
+
+        .btn-logout {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .btn-logout:hover {
+            background: var(--accent-red);
+            color: #fff;
+        }
+
+        /* Conteúdo Principal */
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 2rem 2.5rem;
+            width: calc(100% - var(--sidebar-width));
+        }
+
+        /* Métricas no Topo */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+
+        .metric-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+            flex-shrink: 0;
+        }
+
+        .metric-value {
+            font-size: 1.65rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--text-main);
+        }
+
+        .metric-label {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+            font-weight: 500;
+        }
+
+        /* Ações e Filtros */
+        .actions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header-title-area h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+        }
+
+        .header-title-area p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: #ffffff;
+            border: none;
+            padding: 0.625rem 1.25rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 0.625rem 1.125rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--bg-card-hover);
+        }
+
+        .btn-deploy {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #fff;
+            border: none;
+            padding: 0.625rem 1.25rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            box-shadow: 0 2px 10px rgba(16, 185, 129, 0.25);
+        }
+
+        .btn-deploy:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+        }
+
+        .btn-sm {
+            padding: 0.35rem 0.7rem;
+            font-size: 0.8rem;
+            border-radius: 6px;
+        }
+
+        /* Tabs de Navegação */
+        .tabs-nav {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            background: rgba(59, 130, 246, 0.12);
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Tabela Estilizada */
+        .table-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            overflow: hidden;
+            width: 100%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background-color: rgba(0, 0, 0, 0.25);
+            padding: 1rem 1.25rem;
+            color: var(--text-muted);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 1.1rem 1.25rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.9375rem;
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .badge-estavel { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-beta { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-depreciada { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        .badge-major { background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.4); }
+        .badge-minor { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+        .badge-patch { background: rgba(6, 182, 212, 0.2); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.4); }
+        .badge-hotfix { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+
+        .badge-deploy { background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 700; }
+        .badge-rollback { background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-weight: 700; }
+        .badge-auto_deploy_base { background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); font-weight: 700; }
+
+        /* Modais */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(6px);
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 620px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+        }
+
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.65rem 0.875rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-body);
+            color: var(--text-main);
+            outline: none;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.25rem;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .toast {
+            min-width: 320px;
+            max-width: 420px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 18px;
+            color: var(--text-main);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            pointer-events: auto;
+            animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .toast-progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: var(--primary);
+            animation: toastTimer 3.5s linear forwards;
+        }
+
+        .toast-inserir .toast-progress-bar { background: var(--accent-green); }
+        .toast-alterar .toast-progress-bar { background: var(--primary); }
+        .toast-deletar .toast-progress-bar { background: var(--accent-red); }
+
+        @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes toastTimer { from { width: 100%; } to { width: 0%; } }
+    </style>
+</head>
+<body>
+
+    <!-- Container de Toasts -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Barra Lateral (Sidebar) -->
+    <aside class="sidebar">
+        <div>
+            <div class="sidebar-brand">
+                ⚡ <span>OrderFlow</span>
+            </div>
+            <nav class="sidebar-menu">
+                {% if tem_permissao('projetos', 'ver') %}
+                <div class="sidebar-nav-group">
+                    <a href="/projetos" class="sidebar-link">
+                        <span>📁</span> Projetos & Branches
+                    </a>
+                    {% if tem_permissao('tenants', 'ver') %}
+                    <div class="sidebar-submenu">
+                        <a href="/instancias" class="sidebar-sublink">
+                            <span>🖥️</span> Instâncias (Tenants)
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% elif tem_permissao('tenants', 'ver') %}
+                <a href="/instancias" class="sidebar-link">
+                    <span>🖥️</span> Instâncias (Tenants)
+                </a>
+                {% endif %}
+                {% if tem_permissao('clientes', 'ver') %}
+                <a href="/clientes" class="sidebar-link">
+                    <span>🏢</span> Clientes (Empresas)
+                </a>
+                {% endif %}
+                {% if tem_permissao('versoes', 'ver') %}
+                <a href="/versoes" class="sidebar-link active">
+                    <span>🚀</span> Versões & Releases
+                </a>
+                {% endif %}
+                {% if tem_permissao('usuarios', 'ver') %}
+                <a href="/usuarios" class="sidebar-link">
+                    <span>👥</span> Usuários Admin
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="user-details">
+                    <span class="user-name">{{ session.get('admin_user_nome', 'Admin') }}</span>
+                    <span class="user-role">{{ session.get('admin_perfil', 'Administrador')|upper }}</span>
+                </div>
+                <a href="/logout" class="btn-logout" title="Sair do Painel">
+                    <i class="fa-solid fa-power-off"></i> Sair
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Conteúdo Principal -->
+    <main class="main-wrapper">
+
+        <!-- Métricas Rápidas no Topo -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon" style="background: rgba(59, 130, 246, 0.15); color: var(--primary);">
+                    <i class="fa-solid fa-code-branch"></i>
+                </div>
+                <div>
+                    <div class="metric-value">{{ total_versoes }}</div>
+                    <div class="metric-label">Releases / Versões Registradas</div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-green);">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <div class="metric-value" style="color: var(--accent-green); font-size: 1.5rem;">{{ versao_recomendada }}</div>
+                    <div class="metric-label">Versão Mais Recente (Estável)</div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon" style="background: rgba(139, 92, 246, 0.15); color: var(--accent-purple);">
+                    <i class="fa-solid fa-server"></i>
+                </div>
+                <div>
+                    <div class="metric-value">{{ total_tenants }}</div>
+                    <div class="metric-label">Instâncias Ativas Gerenciadas</div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                </div>
+                <div>
+                    <div class="metric-value" style="color: var(--accent-cyan);">{{ tenants_na_versao_recomendada }} / {{ total_tenants }}</div>
+                    <div class="metric-label">Tenants na Versão Estável</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cabeçalho de Ações -->
+        <div class="actions-header">
+            <div class="header-title-area">
+                <h1><i class="fa-solid fa-code-fork" style="color: var(--primary);"></i> Gestão de Versões & Deploys</h1>
+                <p>Controle de releases de código, histórico de branches e implantação/rollback controlado por instância.</p>
+            </div>
+
+            {% if tem_permissao('versoes', 'deploy') or tem_permissao('versoes', 'editar') %}
+            <div class="action-buttons">
+                <a href="/admin/versoes/sincronizar-central" class="btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 0.6rem 1rem; border-radius: 8px;" title="Sincronizar catálogo de versões com a Central (Online)">
+                    <i class="fa-solid fa-arrows-rotate"></i> Sincronizar Central
+                </a>
+                {% if tem_permissao('versoes', 'deploy') %}
+                <button class="btn-deploy" onclick="abrirModalDeploy()">
+                    <i class="fa-solid fa-rocket"></i> Implantar no Tenant
+                </button>
+                {% endif %}
+                {% if tem_permissao('versoes', 'editar') %}
+                <button class="btn-primary" onclick="abrirModalNovaVersao()">
+                    <i class="fa-solid fa-plus"></i> Nova Versão / Release
+                </button>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Navegação por Abas -->
+        <div class="tabs-nav">
+            <button class="tab-btn active" onclick="trocarAba('tabVersoes', this)">
+                <i class="fa-solid fa-tags"></i> Versões Lançadas (Releases)
+            </button>
+            <button class="tab-btn" onclick="trocarAba('tabTenants', this)">
+                <i class="fa-solid fa-network-wired"></i> Instâncias & Versão Atual
+            </button>
+            <button class="tab-btn" onclick="trocarAba('tabHistorico', this)">
+                <i class="fa-solid fa-clock-rotate-left"></i> Histórico de Deploys & Rollbacks
+            </button>
+        </div>
+
+        <!-- ABA 1: TABELA DE VERSÕES LANÇADAS -->
+        <div id="tabVersoes" class="tab-content active">
+            <div class="table-card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tag / Versão</th>
+                            <th>Branch / Imagem Docker</th>
+                            <th>Tipo</th>
+                            <th>Status</th>
+                            <th>Tenants Ativos</th>
+                            <th>Data de Lançamento</th>
+                            <th style="text-align: right;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for v in versoes %}
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-weight: 700; font-size: 1.05rem; color: #38bdf8; font-family: monospace;">{{ v.tag_versao }}</span>
+                                </div>
+                                <div style="font-size: 0.85rem; color: var(--text-main); font-weight: 500; margin-top: 2px;">
+                                    {{ v.titulo }}
+                                </div>
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                                    {% if v.nome_projeto %}
+                                    <span style="background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); padding: 2px 7px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
+                                        📁 {{ v.nome_projeto }}
+                                    </span>
+                                    {% endif %}
+                                    <span style="background: rgba(255,255,255,0.08); padding: 2px 7px; border-radius: 4px; font-size: 0.78rem; font-family: monospace; color: #e2e8f0;">
+                                        <i class="fa-solid fa-code-branch" style="color: #94a3b8; margin-right: 4px;"></i>{{ v.branch }}
+                                    </span>
+                                </div>
+                                {% if v.docker_tag %}
+                                <div style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace; margin-top: 4px;">
+                                    🐳 {{ v.docker_tag }}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ v.tipo }}">
+                                    {% if v.tipo == 'major' %}🌟 Major
+                                    {% elif v.tipo == 'minor' %}🚀 Minor
+                                    {% elif v.tipo == 'patch' %}⚡ Patch
+                                    {% elif v.tipo == 'hotfix' %}🔥 Hotfix
+                                    {% else %}{{ v.tipo|upper }}
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ v.status }}">
+                                    {% if v.status == 'estavel' %}🟢 Estável
+                                    {% elif v.status == 'beta' %}🟡 Beta / Teste
+                                    {% elif v.status == 'depreciada' %}⚪ Depreciada
+                                    {% else %}{{ v.status|capitalize }}
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                {% if v.total_tenants > 0 %}
+                                <span style="color: #34d399; font-weight: 700; font-size: 0.9rem;">
+                                    {{ v.total_tenants }} instância(s)
+                                </span>
+                                {% else %}
+                                <span style="color: var(--text-muted); font-size: 0.85rem;">0 instâncias</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-size: 0.85rem; color: var(--text-muted);">
+                                {{ v.criado_em }}
+                            </td>
+                            <td style="text-align: right;">
+                                <div style="display: inline-flex; gap: 6px;">
+                                    <button class="btn-secondary btn-sm" onclick='verChangelog({{ v|tojson }})' title="Ver Notas / Changelog">
+                                        <i class="fa-solid fa-file-lines"></i>
+                                    </button>
+                                    {% if tem_permissao('versoes', 'editar') %}
+                                    <button class="btn-secondary btn-sm" onclick='editarVersao({{ v|tojson }})' title="Editar Versão">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    {% endif %}
+                                    {% if tem_permissao('versoes', 'excluir') and v.total_tenants == 0 %}
+                                    <button type="button" class="btn-secondary btn-sm" style="color: var(--accent-red); border-color: rgba(239,68,68,0.3);" onclick="confirmarExcluirVersao({{ v.id }}, '{{ v.tag_versao }}')" title="Excluir Versão">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ABA 2: INSTÂNCIAS E VERSÕES ATUAIS -->
+        <div id="tabTenants" class="tab-content">
+            <div class="table-card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tenant / Empresa</th>
+                            <th>Ambiente</th>
+                            <th>Versão em Execução</th>
+                            <th>Status da Versão</th>
+                            <th>Porta / Host</th>
+                            {% if tem_permissao('versoes', 'deploy') %}
+                            <th style="text-align: right;">Ações de Deploy</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in tenants %}
+                        <tr>
+                            <td>
+                                <strong>{{ t.nome_empresa }}</strong><br>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">ID: {{ t.tenant_id }} ({{ t.cliente_nome or 'Sem cliente' }})</span>
+                            </td>
+                            <td>
+                                {% if t.ambiente == 'producao' %}
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">🚀 Produção</span>
+                                {% elif t.ambiente == 'base' %}
+                                <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;"><i class="fa-solid fa-code"></i> Base</span>
+                                {% else %}
+                                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">🧪 Teste</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span style="font-family: monospace; font-weight: 700; font-size: 0.95rem; color: #38bdf8; background: rgba(56, 189, 248, 0.1); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3);">
+                                    {{ t.versao_atual or 'v1.0.1' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if t.ambiente == 'base' %}
+                                <span style="color: #38bdf8; font-size: 0.85rem; font-weight: 600;"><i class="fa-solid fa-bolt"></i> Auto-update no Lançamento ({{ t.versao_atual }})</span>
+                                {% elif t.status_versao_tipo == 'recomendada' %}
+                                <span style="color: #34d399; font-size: 0.85rem; font-weight: 600;"><i class="fa-solid fa-check-circle"></i> Versão Recomendada ({{ t.versao_atual }})</span>
+                                {% elif t.status_versao_tipo == 'dev' %}
+                                <span style="color: #a855f7; font-size: 0.85rem; font-weight: 600;"><i class="fa-solid fa-flask"></i> Em Desenvolvimento / Local ({{ t.versao_atual }})</span>
+                                {% else %}
+                                <span style="color: #fbbf24; font-size: 0.85rem; font-weight: 600;"><i class="fa-solid fa-arrow-up"></i> Atualização disponível ({{ versao_recomendada }})</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-size: 0.85rem; font-family: monospace; color: var(--text-muted);">
+                                {% if t.ip_externo %}
+                                {{ t.ip_externo }}:{{ t.porta }}
+                                {% else %}
+                                127.0.0.1:{{ t.porta }}
+                                {% endif %}
+                            </td>
+                            {% if tem_permissao('versoes', 'deploy') %}
+                            <td style="text-align: right;">
+                                <button class="btn-deploy btn-sm" onclick="abrirModalDeployComTenant('{{ t.tenant_id }}', '{{ t.versao_atual or 'v1.0.1' }}')">
+                                    <i class="fa-solid fa-rotate"></i> Alterar Versão
+                                </button>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ABA 3: HISTÓRICO DE DEPLOYS & ROLLBACKS -->
+        <div id="tabHistorico" class="tab-content">
+            <div class="table-card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data & Hora</th>
+                            <th>Instância (Tenant)</th>
+                            <th>Ação</th>
+                            <th>De ➔ Para</th>
+                            <th>Executado Por</th>
+                            <th>Status</th>
+                            <th>Observação & Log</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in historico %}
+                        <tr>
+                            <td style="font-size: 0.85rem; color: var(--text-muted); font-family: monospace;">{{ h.data_deploy }}</td>
+                            <td><strong>{{ h.tenant_nome or h.tenant_id }}</strong></td>
+                            <td>
+                                <span class="badge badge-{{ h.acao }}">
+                                    {% if h.acao == 'rollback' %}
+                                    <i class="fa-solid fa-rotate-left"></i> Rollback
+                                    {% elif h.acao == 'auto_deploy_base' %}
+                                    <i class="fa-solid fa-bolt" style="color: #38bdf8;"></i> Auto Base
+                                    {% else %}
+                                    <i class="fa-solid fa-cloud-arrow-up"></i> Deploy
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td style="font-family: monospace; font-size: 0.85rem;">
+                                <span style="color: var(--text-muted);">{{ h.versao_anterior_tag or 'anterior' }}</span> ➔ <strong style="color: #38bdf8;">{{ h.versao_tag }}</strong>
+                            </td>
+                            <td style="font-size: 0.85rem;">👤 {{ h.executado_por or 'Admin' }}</td>
+                            <td>
+                                {% if h.status == 'sucesso' %}
+                                <span style="color: #34d399; font-weight: 700; font-size: 0.85rem;">✓ Concluído</span>
+                                {% else %}
+                                <span style="color: #fbbf24; font-weight: 700; font-size: 0.85rem;">⚠️ Atenção</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="font-size: 0.82rem; color: var(--text-muted);">{{ h.observacao or '-' }}</div>
+                                {% if h.log_execucao %}
+                                <button type="button" class="btn-sm btn-secondary" style="margin-top: 4px; padding: 2px 8px; font-size: 0.72rem; cursor: pointer;" onclick="abrirModalLog(this)" data-log="{{ h.log_execucao|e }}">
+                                    📋 Ver Log da Automação
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                                Nenhum histórico de deploy registrado até o momento.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL 1: CADASTRAR / EDITAR VERSÃO -->
+    <div class="modal-overlay" id="modalVersao">
+        <div class="modal" style="max-width: 860px; width: 92%;">
+            <div class="modal-title">
+                <span id="modalVersaoTitle">Lançar Nova Versão / Release</span>
+                <button type="button" onclick="fecharModal('modalVersao')" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.25rem;">✕</button>
+            </div>
+
+            <form action="/admin/versao/salvar" method="POST" id="formVersao">
+                <input type="hidden" name="id" id="v_id">
+
+                <!-- NOTA DE ATUALIZAÇÃO AUTOMÁTICA DA BASE -->
+                <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 10px; padding: 12px 16px; margin-bottom: 1.25rem; font-size: 0.825rem; color: #a7f3d0; line-height: 1.5;">
+                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #34d399; margin-bottom: 4px;">
+                        <i class="fa-solid fa-bolt"></i> Promoção Automática de Desenvolvimento
+                    </div>
+                    Ao salvar esta versão, a(s) instância(s) em ambiente <strong>BASE</strong> (<span id="lblAutoBaseTag">{{ proxima_versao or 'v1.0.7' }}</span>) serão <strong>automaticamente atualizadas</strong> em tempo real.
+                    <div style="margin-top: 6px; color: var(--text-muted); font-size: 0.78rem;">
+                        🛡️ <em>Ambientes de <strong>TESTE</strong> e <strong>PRODUÇÃO</strong> permanecem intactos na versão em que estão até que você clique manualmente em "Alterar Versão".</em>
+                    </div>
+                </div>
+
+                <div class="form-grid-3" style="display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Tag da Versão (SemVer) *</label>
+                        <input type="text" name="tag_versao" id="v_tag_versao" class="form-control" required placeholder="ex: {{ proxima_versao or 'v1.0.7' }}" oninput="sincronizarDockerTagComVersao(); atualizarLblAutoBase();">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Projeto / Branch Vinculado</label>
+                        <select name="projeto_id" id="v_projeto_id" class="form-control" onchange="aoMudarProjetoVersao()">
+                            <option value="">-- Todos os Projetos (Global) --</option>
+                            {% for p in projetos %}
+                            <option value="{{ p.id }}" data-branch="{{ p.branch_git or 'main' }}">{{ p.nome_projeto }} (branch: {{ p.branch_git or 'main' }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Branch Git *</label>
+                        <input type="text" name="branch" id="v_branch" class="form-control" required value="main" placeholder="ex: main ou release/v1.0.7">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Título do Lançamento *</label>
+                    <input type="text" name="titulo" id="v_titulo" class="form-control" required placeholder="ex: Atualização de Performance e Controle de Sessões">
+                </div>
+
+                <div class="form-group">
+                    <label>Imagem Docker / Tag Completa</label>
+                    <input type="text" name="docker_tag" id="v_docker_tag" class="form-control" placeholder="ex: {{ docker_repo_padrao or 'eduardotavares24/orderflow' }}:{{ proxima_versao or 'v1.0.2' }}">
+                    <small style="display: block; color: var(--text-muted); font-size: 0.78rem; margin-top: 4px;">
+                        Prefixo automático: <code>{{ docker_repo_padrao or 'eduardotavares24/orderflow' }}:</code> complementado em tempo real com a Tag de Versão acima.
+                    </small>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Tipo de Release</label>
+                        <select name="tipo" id="v_tipo" class="form-control">
+                            <option value="minor">🚀 Minor (Nova Funcionalidade)</option>
+                            <option value="patch">⚡ Patch (Correções e Ajustes)</option>
+                            <option value="hotfix">🔥 Hotfix (Correção Crítica)</option>
+                            <option value="major">🌟 Major (Grande Marco)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Status da Versão</label>
+                        <select name="status" id="v_status" class="form-control">
+                            <option value="estavel">🟢 Estável (Recomendada)</option>
+                            <option value="beta">🟡 Beta / Em Testes</option>
+                            <option value="depreciada">⚪ Depreciada</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Prompt</label>
+                    <textarea name="prompt" id="v_prompt" rows="3" class="form-control" placeholder="Cole aqui o prompt ou solicitação original que deu origem a esta versão..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Notas de Atualização (Changelog)</label>
+                    <textarea name="descricao" id="v_descricao" rows="4" class="form-control" placeholder="Descreva as principais mudanças, melhorias ou correções incluídas nesta versão..."></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalVersao')">Cancelar</button>
+                    <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Salvar Versão</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: IMPLANTAR / ROLLBACK DE VERSÃO NO TENANT -->
+    <div class="modal-overlay" id="modalDeploy">
+        <div class="modal" style="max-width: 520px;">
+            <div class="modal-title">
+                <span>🚀 Implantar ou Reverter Versão</span>
+                <button type="button" onclick="fecharModal('modalDeploy')" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.25rem;">✕</button>
+            </div>
+
+            <form action="/admin/versao/deploy" method="POST" id="formDeploy">
+                <div class="form-group">
+                    <label>Selecione a Instância (Tenant) *</label>
+                    <select name="tenant_id" id="deploy_tenant_id" class="form-control" required onchange="aoMudarTenantDeploy()">
+                        <option value="">-- Escolha a Instância --</option>
+                        {% for t in tenants %}
+                        <option value="{{ t.tenant_id }}" data-versao-atual="{{ t.versao_atual or 'v1.0.1' }}" data-nome="{{ t.nome_empresa }}">
+                            {{ t.nome_empresa }} ({{ t.tenant_id }}) — Atual: {{ t.versao_atual or 'v1.0.1' }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="boxAlertaVersaoAtual" style="display: none; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 10px 14px; margin-bottom: 1rem; font-size: 0.85rem;">
+                    Versão Atual Rodando: <strong id="lblVersaoAtual" style="color: #38bdf8;">v1.0.1</strong>
+                </div>
+
+                <div class="form-group">
+                    <label>Versão de Destino *</label>
+                    <select name="versao_tag" id="deploy_versao_tag" class="form-control" required onchange="aoMudarVersaoDestino()">
+                        <option value="">-- Selecione a Versão para Implantar --</option>
+                        {% for v in versoes %}
+                        <option value="{{ v.tag_versao }}">
+                            {{ v.tag_versao }} — {{ v.titulo }} ({{ v.status|capitalize }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="boxTipoOperacao" style="display: none; border-radius: 8px; padding: 10px 14px; margin-bottom: 1rem; font-size: 0.85rem;">
+                    <!-- Preenchido via JavaScript avisando se é Deploy ou Rollback -->
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-main); font-size: 0.88rem; margin-bottom: 0;">
+                        <input type="checkbox" name="criar_backup" value="1" checked style="width: 17px; height: 17px; accent-color: var(--primary);">
+                        <div>
+                            <strong>Criar Snapshot de Backup do Banco de Dados</strong>
+                            <small style="display: block; color: var(--text-muted); font-size: 0.78rem;">Gera cópia automática do SQLite antes de aplicar a versão para possibilitar restauração imediata.</small>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-main); font-size: 0.88rem; margin-bottom: 0;">
+                        <input type="checkbox" name="reiniciar_container" value="1" checked style="width: 17px; height: 17px; accent-color: #38bdf8;">
+                        <div>
+                            <strong>Executar Automação no Docker do Servidor</strong>
+                            <small style="display: block; color: var(--text-muted); font-size: 0.78rem;">Recria ou reinicia automaticamente o container da loja com a versão selecionada no Docker da VPS sem precisar abrir terminal.</small>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label>Observação do Deploy (Opcional)</label>
+                    <input type="text" name="observacao" class="form-control" placeholder="ex: Atualização programada pós testes / Ajuste emergencial">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalDeploy')">Cancelar</button>
+                    <button type="submit" class="btn-deploy" id="btnConfirmarDeploy"><i class="fa-solid fa-rocket"></i> Confirmar Implantação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: VER CHANGELOG DETALHADO -->
+    <div class="modal-overlay" id="modalChangelog">
+        <div class="modal" style="max-width: 860px; width: 92%;">
+            <div class="modal-title">
+                <span id="clTagVersao">Detalhes da Versão</span>
+                <button type="button" onclick="fecharModal('modalChangelog')" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.25rem;">✕</button>
+            </div>
+            <div style="margin-bottom: 1.25rem;">
+                <h4 id="clTitulo" style="color: #38bdf8; font-size: 1.15rem; margin-bottom: 8px;"></h4>
+                <div style="display: flex; gap: 8px; margin-bottom: 14px;" id="clBadges"></div>
+
+                <div id="clPromptBox" style="display: none; margin-bottom: 14px;">
+                    <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: #c084fc; margin-bottom: 6px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-terminal"></i> Prompt Original
+                    </div>
+                    <div style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 8px; padding: 14px 18px; font-size: 0.92rem; line-height: 1.6; white-space: pre-wrap; color: #e9d5ff; max-height: 25vh; overflow-y: auto;" id="clPrompt"></div>
+                </div>
+
+                <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-list-check"></i> Notas de Atualização (Changelog)
+                </div>
+                <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px 22px; font-size: 0.95rem; line-height: 1.7; white-space: pre-wrap; max-height: 50vh; overflow-y: auto;" id="clDescricao"></div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="fecharModal('modalChangelog')">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: VER LOG DE EXECUÇÃO DA AUTOMAÇÃO DOCKER -->
+    <div class="modal-overlay" id="modalLogExecucao">
+        <div class="modal" style="max-width: 860px; width: 92%;">
+            <div class="modal-title">
+                <span>📋 Log de Execução da Automação</span>
+                <button type="button" onclick="fecharModal('modalLogExecucao')" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.25rem;">✕</button>
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">Detalhes do snapshot de banco e comandos executados no Docker do host:</p>
+                <div style="background: #020617; border: 1px solid #1e293b; border-radius: 6px; padding: 14px; font-family: monospace; font-size: 0.82rem; color: #38bdf8; max-height: 350px; overflow-y: auto; white-space: pre-wrap; line-height: 1.5;" id="conteudoLogExecucao"></div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="fecharModal('modalLogExecucao')">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONFIRMAÇÃO CUSTOMIZADO: EXCLUIR VERSÃO -->
+    <div class="modal-overlay" id="modalConfirmacaoVersao">
+        <div class="modal" style="max-width: 440px; text-align: center;">
+            <div style="font-size: 2.6rem; margin-bottom: 0.6rem;">🗑️</div>
+            <div class="modal-title" style="margin-bottom: 0.6rem; justify-content: center; font-size: 1.25rem;">Excluir Versão?</div>
+            <p id="modalConfirmTextoVersao" style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.6rem; line-height: 1.5;"></p>
+            <form id="formConfirmacaoVersao" method="POST" style="margin: 0;">
+                <div class="modal-actions" style="justify-content: center; gap: 1rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalConfirmacaoVersao')">Cancelar</button>
+                    <button type="submit" class="btn-primary" style="background-color: var(--accent-red);">Sim, Excluir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function confirmarExcluirVersao(id, tagVersao) {
+            document.getElementById('modalConfirmTextoVersao').innerHTML = `Deseja realmente excluir a versão <strong>${tagVersao}</strong>?<br><br><span style="color: var(--accent-red); font-weight: 600;">Esta ação é irreversível.</span>`;
+            document.getElementById('formConfirmacaoVersao').action = `/admin/versao/deletar/${id}`;
+            document.getElementById('modalConfirmacaoVersao').style.display = 'flex';
+        }
+        function trocarAba(abaId, elementoBtn) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            elementoBtn.classList.add('active');
+            document.getElementById(abaId).classList.add('active');
+        }
+
+        function fecharModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        const DOCKER_REPO_PADRAO = {{ (docker_repo_padrao or 'eduardotavares24/orderflow')|tojson }};
+        const PROXIMA_VERSAO_PADRAO = {{ (proxima_versao or 'v1.0.2')|tojson }};
+
+        function sincronizarDockerTagComVersao() {
+            const campoTag = document.getElementById('v_tag_versao');
+            const campoDocker = document.getElementById('v_docker_tag');
+            if (!campoTag || !campoDocker) return;
+
+            const tagVal = campoTag.value.trim();
+            let repoPrefix = DOCKER_REPO_PADRAO;
+
+            const dockerAtual = campoDocker.value.trim();
+            if (dockerAtual.includes(':')) {
+                const partes = dockerAtual.split(':');
+                if (partes[0].trim()) {
+                    repoPrefix = partes[0].trim();
+                }
+            } else if (dockerAtual) {
+                repoPrefix = dockerAtual;
+            }
+
+            if (tagVal) {
+                campoDocker.value = repoPrefix + ':' + tagVal;
+            } else {
+                campoDocker.value = repoPrefix + ':';
+            }
+        }
+
+        function atualizarLblAutoBase() {
+            const campoTag = document.getElementById('v_tag_versao');
+            const lbl = document.getElementById('lblAutoBaseTag');
+            if (campoTag && lbl) {
+                lbl.innerText = campoTag.value.trim() || 'esta versão';
+            }
+        }
+
+        function aoMudarProjetoVersao() {
+            const selProj = document.getElementById('v_projeto_id');
+            if (!selProj) return;
+            const opt = selProj.options[selProj.selectedIndex];
+            if (opt && opt.value) {
+                const branch = opt.getAttribute('data-branch');
+                if (branch) {
+                    document.getElementById('v_branch').value = branch;
+                }
+            }
+        }
+
+        function abrirModalNovaVersao() {
+            document.getElementById('modalVersaoTitle').innerText = 'Lançar Nova Versão / Release';
+            document.getElementById('formVersao').reset();
+            document.getElementById('v_id').value = '';
+
+            const selProj = document.getElementById('v_projeto_id');
+            if (selProj) selProj.value = '';
+
+            // Auto-incrementa versão e complementa a tag completa até os dois pontos
+            const campoTag = document.getElementById('v_tag_versao');
+            const campoDocker = document.getElementById('v_docker_tag');
+            const campoPrompt = document.getElementById('v_prompt');
+            if (campoTag) campoTag.value = PROXIMA_VERSAO_PADRAO;
+            if (campoDocker) campoDocker.value = DOCKER_REPO_PADRAO + ':' + PROXIMA_VERSAO_PADRAO;
+            if (campoPrompt) campoPrompt.value = '';
+
+            atualizarLblAutoBase();
+
+            document.getElementById('modalVersao').style.display = 'flex';
+            if (campoTag) {
+                campoTag.focus();
+                campoTag.select();
+            }
+        }
+
+        function editarVersao(v) {
+            document.getElementById('modalVersaoTitle').innerText = 'Editar Versão ' + v.tag_versao;
+            document.getElementById('v_id').value = v.id;
+            document.getElementById('v_tag_versao').value = v.tag_versao;
+            document.getElementById('v_branch').value = v.branch || 'main';
+            document.getElementById('v_docker_tag').value = v.docker_tag || (DOCKER_REPO_PADRAO + ':' + v.tag_versao);
+            document.getElementById('v_titulo').value = v.titulo;
+            document.getElementById('v_prompt').value = v.prompt || '';
+            document.getElementById('v_descricao').value = v.descricao || '';
+            document.getElementById('v_tipo').value = v.tipo || 'minor';
+            document.getElementById('v_status').value = v.status || 'estavel';
+
+            const selProj = document.getElementById('v_projeto_id');
+            if (selProj) {
+                selProj.value = v.projeto_id ? String(v.projeto_id) : '';
+            }
+
+            atualizarLblAutoBase();
+            document.getElementById('modalVersao').style.display = 'flex';
+        }
+
+        function verChangelog(v) {
+            document.getElementById('clTagVersao').innerText = 'Release ' + v.tag_versao;
+            document.getElementById('clTitulo').innerText = v.titulo;
+            document.getElementById('clDescricao').innerText = v.descricao || 'Nenhuma nota de lançamento cadastrada para esta versão.';
+            document.getElementById('clBadges').innerHTML = `
+                <span class="badge badge-${v.tipo}">${v.tipo.toUpperCase()}</span>
+                <span class="badge badge-${v.status}">${v.status.toUpperCase()}</span>
+                <span style="font-size: 0.78rem; color: var(--text-muted); align-self: center;">Branch: <code>${v.branch}</code></span>
+            `;
+
+            const boxPrompt = document.getElementById('clPromptBox');
+            const txtPrompt = document.getElementById('clPrompt');
+            if (v.prompt && v.prompt.trim()) {
+                txtPrompt.innerText = v.prompt;
+                boxPrompt.style.display = 'block';
+            } else {
+                boxPrompt.style.display = 'none';
+            }
+
+            document.getElementById('modalChangelog').style.display = 'flex';
+        }
+
+        function abrirModalDeploy() {
+            document.getElementById('formDeploy').reset();
+            document.getElementById('boxAlertaVersaoAtual').style.display = 'none';
+            document.getElementById('boxTipoOperacao').style.display = 'none';
+            document.getElementById('modalDeploy').style.display = 'flex';
+        }
+
+        function abrirModalDeployComTenant(tenantId, versaoAtual) {
+            abrirModalDeploy();
+            const sel = document.getElementById('deploy_tenant_id');
+            sel.value = tenantId;
+            aoMudarTenantDeploy();
+        }
+
+        function aoMudarTenantDeploy() {
+            const sel = document.getElementById('deploy_tenant_id');
+            const opt = sel.options[sel.selectedIndex];
+            const box = document.getElementById('boxAlertaVersaoAtual');
+            const lbl = document.getElementById('lblVersaoAtual');
+
+            if (opt && opt.value) {
+                const vAtual = opt.getAttribute('data-versao-atual') || 'v1.0.1';
+                lbl.innerText = vAtual;
+                box.style.display = 'block';
+                aoMudarVersaoDestino();
+            } else {
+                box.style.display = 'none';
+                document.getElementById('boxTipoOperacao').style.display = 'none';
+            }
+        }
+
+        function aoMudarVersaoDestino() {
+            const selTenant = document.getElementById('deploy_tenant_id');
+            const optTenant = selTenant.options[selTenant.selectedIndex];
+            const selVersao = document.getElementById('deploy_versao_tag');
+            const vDestino = selVersao.value;
+            const boxOp = document.getElementById('boxTipoOperacao');
+            const btn = document.getElementById('btnConfirmarDeploy');
+
+            if (!optTenant || !optTenant.value || !vDestino) {
+                boxOp.style.display = 'none';
+                return;
+            }
+
+            const vAtual = optTenant.getAttribute('data-versao-atual') || 'v1.0.0';
+            const cmp = compararVersoes(vDestino, vAtual);
+
+            if (cmp === 0) {
+                boxOp.style.display = 'block';
+                boxOp.style.background = 'rgba(245, 158, 11, 0.12)';
+                boxOp.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+                boxOp.style.color = '#fbbf24';
+                boxOp.innerHTML = '⚠️ <strong>Atenção:</strong> O tenant já está executando exatamente esta versão.';
+                btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Reaplicar Versão';
+            } else if (cmp < 0) {
+                boxOp.style.display = 'block';
+                boxOp.style.background = 'rgba(245, 158, 11, 0.15)';
+                boxOp.style.border = '1px solid rgba(245, 158, 11, 0.4)';
+                boxOp.style.color = '#fbbf24';
+                boxOp.innerHTML = `⚠️ <strong>Operação de ROLLBACK detectada:</strong> Você está revertendo da versão <code>${vAtual}</code> para a versão anterior <code>${vDestino}</code>. O snapshot garantirá segurança.`;
+                btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i> Confirmar Rollback';
+            } else {
+                boxOp.style.display = 'block';
+                boxOp.style.background = 'rgba(16, 185, 129, 0.15)';
+                boxOp.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+                boxOp.style.color = '#34d399';
+                boxOp.innerHTML = `🚀 <strong>Operação de DEPLOY:</strong> Atualizando instância de <code>${vAtual}</code> para a nova versão <code>${vDestino}</code>.`;
+                btn.innerHTML = '<i class="fa-solid fa-rocket"></i> Confirmar Deploy';
+            }
+        }
+
+        function extrairPartesVersao(vStr) {
+            if (!vStr) return [0];
+            const nums = String(vStr).match(/\d+/g);
+            return nums ? nums.map(Number) : [0];
+        }
+
+        function compararVersoes(v1, v2) {
+            const p1 = extrairPartesVersao(v1);
+            const p2 = extrairPartesVersao(v2);
+            const maxLen = Math.max(p1.length, p2.length);
+            for (let i = 0; i < maxLen; i++) {
+                const n1 = p1[i] || 0;
+                const n2 = p2[i] || 0;
+                if (n1 < n2) return -1;
+                if (n1 > n2) return 1;
+            }
+            return 0;
+        }
+
+        function abrirModalLog(btn) {
+            const log = btn.getAttribute('data-log') || 'Nenhum detalhe de log registrado para esta operação.';
+            document.getElementById('conteudoLogExecucao').innerText = log;
+            abrirModal('modalLogExecucao');
+        }
+
+        function showToast(message, type = 'info', duration = 3500) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+
+            let icon = 'ℹ️';
+            if (type === 'inserir') icon = '✅';
+            if (type === 'alterar') icon = '🚀';
+            if (type === 'deletar') icon = '🗑️';
+            if (type === 'erro') icon = '⚠️';
+
+            toast.innerHTML = `
+                <div style="font-size: 1.25rem;">${icon}</div>
+                <div style="flex: 1;">
+                    <div style="font-size: 0.875rem; font-weight: 600; line-height: 1.4;">${message}</div>
+                </div>
+                <div class="toast-progress-bar"></div>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const msg = urlParams.get('msg');
+            const tipo = urlParams.get('tipo');
+            if (msg) {
+                showToast(msg, tipo || 'info');
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        });
+    </script>
+</body>
+</html>

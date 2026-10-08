@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block titulo_pagina %}Configurações & Aparência do Sistema{% endblock %}
+
+{% block conteudo %}
+<!-- 1. BLOCO DE PREFERÊNCIAS DE APARÊNCIA (MODO CLARO / ESCURO) -->
+<div class="quadrante-card" style="margin-bottom: 12px;">
+  <div class="quadrante-header">
+    <div class="quadrante-header-title">
+      <span>🎨</span>
+      <span>Aparência e Modo de Visualização</span>
+    </div>
+    <div class="quadrante-header-tools">
+      <span style="background: #0284c7; color: #fff; font-size: 9px; padding: 1px 6px; border-radius: 2px; font-weight: 700;">PREFERÊNCIAS DO USUÁRIO</span>
+    </div>
+  </div>
+
+  <div class="quadrante-body" style="padding: 16px;">
+    <p style="font-size: 11.5px; color: #475569; margin-bottom: 14px;">
+      Escolha o tema visual para a Central de Pedidos e todo o sistema. A sua escolha será salva automaticamente no navegador.
+    </p>
+
+    <!-- OPÇÕES INTERATIVAS DE TEMA: LIGHT / DARK -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; max-width: 650px;">
+      
+      <!-- CARTÃO MODO CLARO (LIGHT) -->
+      <div id="card-theme-light" class="theme-option-card" onclick="selecionarTema('light')"
+        style="border: 2px solid #cbd5e1; border-radius: 6px; padding: 14px; background: #ffffff; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; gap: 10px; position: relative;">
+        
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 20px;">☀️</span>
+            <div>
+              <strong style="font-size: 12.5px; color: #0f172a; display: block;">Modo Claro</strong>
+              <span style="font-size: 10px; color: #64748b;">Padrão institucional Sankhya OM</span>
+            </div>
+          </div>
+          <input type="radio" name="radio_theme" id="radio-theme-light" value="light" style="margin: 0; cursor: pointer;">
+        </div>
+
+        <!-- Miniatura Preview Claro -->
+        <div style="background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 4px; pointer-events: none;">
+          <div style="height: 10px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 2px; width: 40%;"></div>
+          <div style="height: 8px; background: #00A859; border-radius: 2px; width: 80%;"></div>
+          <div style="height: 18px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 2px;"></div>
+        </div>
+      </div>
+
+      <!-- CARTÃO MODO ESCURO (DARK) -->
+      <div id="card-theme-dark" class="theme-option-card" onclick="selecionarTema('dark')"
+        style="border: 2px solid #cbd5e1; border-radius: 6px; padding: 14px; background: #1e293b; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; gap: 10px; position: relative;">
+        
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 20px;">🌙</span>
+            <div>
+              <strong style="font-size: 12.5px; color: #f8fafc; display: block;">Modo Escuro</strong>
+              <span style="font-size: 10px; color: #94a3b8;">Maior conforto visual e contraste</span>
+            </div>
+          </div>
+          <input type="radio" name="radio_theme" id="radio-theme-dark" value="dark" style="margin: 0; cursor: pointer;">
+        </div>
+
+        <!-- Miniatura Preview Escuro -->
+        <div style="background: #0b1120; border: 1px solid #334155; border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 4px; pointer-events: none;">
+          <div style="height: 10px; background: #1e293b; border: 1px solid #475569; border-radius: 2px; width: 40%;"></div>
+          <div style="height: 8px; background: #00A859; border-radius: 2px; width: 80%;"></div>
+          <div style="height: 18px; background: #0f172a; border: 1px solid #334155; border-radius: 2px;"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- BOTÕES RÁPIDOS DE SELEÇÃO -->
+    <div style="margin-top: 16px; display: flex; align-items: center; gap: 10px;">
+      <button type="button" class="snk-tool-btn-large" onclick="selecionarTema('light')" style="height: 28px; padding: 0 14px; font-size: 11px;">
+        <span>☀️ Ativar Modo Claro</span>
+      </button>
+      <button type="button" class="snk-tool-btn-large" onclick="selecionarTema('dark')" style="height: 28px; padding: 0 14px; font-size: 11px;">
+        <span>🌙 Ativar Modo Escuro</span>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- 2. BLOCO DE PARÂMETROS ADM (SE O USUÁRIO FOR ADMINISTRADOR) -->
+{% if session.get('usuario') and session['usuario'].get('is_adm') %}
+<div class="quadrante-card" style="margin-bottom: 8px;">
+  <div class="quadrante-header">
+    <div class="quadrante-header-title">
+      <span>⚙️</span>
+      <span>Parâmetros de Integração Sankhya</span>
+    </div>
+    <div class="quadrante-header-tools">
+      <span style="background: #00A859; color: #fff; font-size: 9px; padding: 1px 6px; border-radius: 2px; font-weight: 700;">ÁREA ADM</span>
+    </div>
+  </div>
+
+  <div class="quadrante-body" style="padding: 14px;">
+    
+    <div style="max-width: 600px;">
+      
+      <!-- Bloco 1: Conexão Sankhya -->
+      <div style="background: var(--cor-fundo-card, #f8fafc); border: 1px solid var(--cor-borda, #cbd5e1); border-radius: 4px; padding: 12px;">
+        <div style="font-weight: 700; font-size: 11.5px; color: var(--cor-texto-principal, #0f172a); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+          <span>🌿</span>
+          <span>Parâmetros do Servidor Sankhya</span>
+        </div>
+
+        <div class="form-field-row" style="margin-bottom: 6px;">
+          <span class="form-field-label" style="width: 120px;">URL do Servidor:</span>
+          <div class="form-field-control">
+            <input type="text" class="form-input-compact" value="{{ sankhya_url or 'https://autogiro.nuvemdatacom.com.br:8035' }}" readonly>
+          </div>
+        </div>
+
+        <div class="form-field-row" style="margin-bottom: 6px;">
+          <span class="form-field-label" style="width: 120px;">Base Sankhya:</span>
+          <div class="form-field-control">
+            <input type="text" class="form-input-compact" value="{{ base_sankhya or 'Teste' }}" readonly style="font-weight: 600;">
+          </div>
+        </div>
+
+        <div class="form-field-row" style="margin-bottom: 6px;">
+          <span class="form-field-label" style="width: 120px;">Usuário de Integração:</span>
+          <div class="form-field-control">
+            <input type="text" class="form-input-compact" value="{{ sankhya_username or 'integra.api' }}" readonly>
+          </div>
+        </div>
+
+        <div class="form-field-row">
+          <span class="form-field-label" style="width: 120px;">Status da Conexão:</span>
+          <div class="form-field-control">
+            <span style="color: #16a34a; font-weight: 700; font-size: 10.5px;">● Conectado</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+{% endif %}
+
+<!-- SCRIPT DE CONFIGURAÇÃO DE TEMA -->
+<script>
+  function destacarCartaoTema(tema) {
+    const cardLight = document.getElementById("card-theme-light");
+    const cardDark = document.getElementById("card-theme-dark");
+    const radioLight = document.getElementById("radio-theme-light");
+    const radioDark = document.getElementById("radio-theme-dark");
+
+    if (tema === "dark") {
+      if (cardDark) {
+        cardDark.style.borderColor = "#00A859";
+        cardDark.style.boxShadow = "0 0 0 2px rgba(0, 168, 89, 0.4)";
+      }
+      if (cardLight) {
+        cardLight.style.borderColor = "#cbd5e1";
+        cardLight.style.boxShadow = "none";
+      }
+      if (radioDark) radioDark.checked = true;
+      if (radioLight) radioLight.checked = false;
+    } else {
+      if (cardLight) {
+        cardLight.style.borderColor = "#00A859";
+        cardLight.style.boxShadow = "0 0 0 2px rgba(0, 168, 89, 0.4)";
+      }
+      if (cardDark) {
+        cardDark.style.borderColor = "#cbd5e1";
+        cardDark.style.boxShadow = "none";
+      }
+      if (radioLight) radioLight.checked = true;
+      if (radioDark) radioDark.checked = false;
+    }
+  }
+
+  function selecionarTema(tema) {
+    aplicarTemaGlobal(tema);
+    destacarCartaoTema(tema);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const temaAtual = document.documentElement.getAttribute("data-theme") || "light";
+    destacarCartaoTema(temaAtual);
+
+    window.addEventListener("temaAlterado", function (e) {
+      destacarCartaoTema(e.detail.tema);
+    });
+  });
+</script>
+{% endblock %}
